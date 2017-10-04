@@ -1,7 +1,9 @@
-*.lp
-*.sol
 instances/sol
 x64
+lib
+
+*.lp
+*.sol
 *.vcxproj
 *.vcxproj.filters
 *.vcxproj.user
