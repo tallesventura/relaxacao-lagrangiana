@@ -1,0 +1,8 @@
+*.lp
+*.sol
+instances/sol
+x64
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+vmc.h
