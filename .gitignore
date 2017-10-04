@@ -6,3 +6,4 @@ x64
 *.vcxproj.filters
 *.vcxproj.user
 vmc.h
+annotations.h
