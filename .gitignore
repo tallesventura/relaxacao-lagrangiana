@@ -1,6 +1,7 @@
 instances/sol
 x64
 lib
+Debug
 
 *.lp
 *.sol
@@ -8,4 +9,4 @@ lib
 *.vcxproj.filters
 *.vcxproj.user
 vmc.h
-annotations.h
+annotation.h
