@@ -1,4 +1,5 @@
 #include "uCBCTT.h"
+#include "RelLagran.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -8,15 +9,46 @@
 
 #define MAX(x,y) (((x) > (y)) ? (x) : (y))
 
-//#define RES_SOFT
-//#define RES_CAP_SAL // Restrição soft de capacidade das salas
-//#define	RES_JAN_HOR // Restrição soft de janelas de horários
-//#define RES_DIA_MIN // Restrição soft de dias mínimos
-//#define RES_SAL_DIF // Restrição soft de salas diferentes
+#define RES_SOFT
+#define RES_CAP_SAL // Restrição soft de capacidade das salas
+#define	RES_JAN_HOR // Restrição soft de janelas de horários
+#define RES_DIA_MIN // Restrição soft de dias mínimos
+#define RES_SAL_DIF // Restrição soft de salas diferentes
 
-char INST[50] = "comp";
-//char INST[50] = "toy";
+//============================= VARIÁVEIS GLOBAIS ==============================
+
+// ------------ Dados de entrada
+char nomInst__[150]; // nome da instância
+int numDis__;        // número de disciplinas 
+int numTur__;        // número de turmas
+int numPro__;        // número de professores
+int numSal__;        // número de salas
+int numDia__;        // número de dias
+int numPerDia__;     // número de períodos por dia
+int numPerTot__;     // número de períodos total
+int numRes__;        // número de restrições
+int numSol__;        // número de colunas
+int numVar__;        // número de variáveis
+Disciplina vetDisciplinas__[MAX_DIS];
+Turma vetTurmas__[MAX_TUR];
+Professor vetProfessores__[MAX_PRO];
+Sala vetSalas__[MAX_SAL];
+Restricao vetRestricoes__[MAX_RES];
+
+// ------------ CPLEX
+
+
+// ------------ Auxiliares
+int matDisTur__[MAX_DIS][MAX_TUR]; // Dis x Cur; 1 se a disciplina d faz parte do currículo c; 0 caso contrário
+
+RestJanHor *vetRestJanHor__; // Vetor com as restrições de janela horário
+int coefMatXFO[MAX_PER * MAX_DIA][MAX_SAL][MAX_DIS]; // Matriz de coeficientes das variáveis x da FO.
+
+//char INST[50] = "comp";
+char INST[50] = "toy";
 int PESOS[4] = { 1,2,5,1 };
+
+//==============================================================================
 
 
 //------------------------------------------------------------------------------
@@ -24,13 +56,20 @@ int main(int argc, char *argv[])
 {
 	char nomeInst[10];
 	strcpy_s(nomeInst, INST);
-	strcat_s(nomeInst, "02");
+	strcat_s(nomeInst, "3");
 
-	//execUma(nomeInst);
-	execTodas();
+	execUma(nomeInst);
+	//execTodas();
+
+	initVetJanHor();
+	montaMatCoefXFO();
+	montaCoefRestJanHor();
+
+	FILE* f = fopen("teste.txt", "w");
+
+	fclose(f);
 
 	printf("\n\n>>> Pressione ENTER para encerrar: ");
-	desaloca();
 	_getch();
 	return 0;
 }
@@ -153,7 +192,7 @@ void escreverSol(Solucao &s, char *arq)
 	fprintf(f, "Tempo.......: %.2f\n", s.tempo_);
 	//------------------------------------------------------------- 
 	// preencher a solucao
-	fprintf(f, "\n\n>>> SOLUCAO\n\n", s.tempo_);
+	fprintf(f, "\n\n>>> SOLUCAO (<periodo><sala><disciplina>)\n\n", s.tempo_);
 	for (int p = 0; p < numPerDia__; p++)
 		for (int d = 0; d < numDia__; d++)
 			for (int r = 0; r < numSal__; r++)
@@ -222,6 +261,7 @@ void escreverSol(Solucao &s, char *arq)
 	//------------------------------------------------------------- 
 	// verificar a solucao
 	// HARD
+
 	s.vioNumAul_ = 0;
 	for (int c = 0; c < numDis__; c++)
 	{
@@ -235,6 +275,7 @@ void escreverSol(Solucao &s, char *arq)
 		}
 		s.vioNumAul_ += abs(vetDisciplinas__[c].numPer_ - aux);
 	}
+
 	s.vioAulSim_ = 0;
 	s.vioDisSim_ = 0;
 	s.vioProSim_ = 0;
@@ -606,7 +647,7 @@ void montarModeloPLI(char *arq)
 			fprintf(f, "0 <= y_%d_%d <= 1\n", r, c);
 #endif
 #ifdef RES_SOFT
-	fprintf(f, "\nGENERALS\n");
+	fprintf(f, "\nGENERALS\n"); // Para variáveis inteiras
 	fprintf(f, "\n\\Variáveis q\n");
 	for (int c = 0; c < numDis__; c++)
 		fprintf(f, "q_%d\n", c);
@@ -758,12 +799,116 @@ void testarEntrada()
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-void desaloca() {
-	int i;
+void initRestJanHor(RestJanHor *rest) {
 
-	for (i = 0; i < numVar__; i++) {
-		free(matGCInicial__[i]);
+	for (int u = 0; u < MAX_TUR; u++) {
+		for (int d = 0; d < MAX_DIA; d++) {
+			for (int s = 0; s < MAX_PER; s++) {
+				rest->coefMatZ[u][d][s] = 0;
+			}
+		}
 	}
-	free(matGCInicial__);
+
+	for (int p = 0; p < MAX_PER * MAX_DIA; p++) {
+		for (int r = 0; r < MAX_SAL; r++) {
+			for (int c = 0; c < MAX_DIS; c++) {
+				rest->coefMatX[p][r][c] = 0;
+			}
+		}
+	}
+}
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+void initVetJanHor() {
+
+	int numRest = numTur__*numDia__*numPerDia__;
+	vetRestJanHor__ = (RestJanHor*)malloc(numRest * sizeof(RestJanHor));
+
+	for (int i = 0; i < numRest; i++) {
+		initRestJanHor(&vetRestJanHor__[i]);
+	}
+}
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+void montaMatCoefXFO() {
+
+	for (int p = 0; p < MAX_PER * MAX_DIA; p++) {
+		for (int r = 0; r < MAX_SAL; r++) {
+			for (int c = 0; c < MAX_DIS; c++) {
+				if (vetDisciplinas__[c].numAlu_ > vetSalas__[r].capacidade_)
+					coefMatXFO[p][r][c] = (vetDisciplinas__[c].numAlu_ - vetSalas__[r].capacidade_);
+				else
+					coefMatXFO[p][r][c] = 0;
+			}
+		}
+	}
+}
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+void montaCoefRestJanHor() {
+
+	int numRest = numTur__*numDia__*numPerDia__;
+
+	RestJanHor *rest = &vetRestJanHor__[0];
+
+	// Primeiro período do dia
+	for (int u = 0; u < numTur__; u++)
+	{
+		for (int d = 0; d < numDia__; d++)
+		{
+			for (int c = 0; c < numDis__; c++)
+				if (matDisTur__[c][u] == 1)
+				{
+					for (int r = 0; r < numSal__; r++) {
+						rest->coefMatX[d*numPerDia__][r][c] = 1;
+						rest->coefMatX[(d*numPerDia__) + 1][r][c] = -1;
+					}
+				}
+			rest->coefMatZ[u][d][0] = -1;
+		}
+	}
+
+	rest = &vetRestJanHor__[1];
+	// Último período do dia
+	for (int u = 0; u < numTur__; u++)
+	{
+		for (int d = 0; d < numDia__; d++)
+		{
+			for (int c = 0; c < numDis__; c++)
+				if (matDisTur__[c][u] == 1)
+				{
+					for (int r = 0; r < numSal__; r++) {
+						rest->coefMatX[(d*numPerDia__) + numPerDia__ - 1][r][c] = 1;
+						rest->coefMatX[(d*numPerDia__) + numPerDia__ - 2][r][c] = -1;
+					}
+				}
+			rest->coefMatZ[u][d][1] = -1;
+		}
+	}
+
+	// Períodos intermediários do dia
+	for (int s = 2; s < numPerDia__; s++)
+	{
+		rest = &vetRestJanHor__[s];
+		for (int u = 0; u < numTur__; u++)
+		{
+			for (int d = 0; d < numDia__; d++)
+			{
+				for (int c = 0; c < numDis__; c++)
+					if (matDisTur__[c][u] == 1)
+					{
+						for (int r = 0; r < numSal__; r++) {
+							rest->coefMatX[(d*numPerDia__) + s - 1][r][c] = 1;
+							rest->coefMatX[(d*numPerDia__) + s - 2][r][c] = -1;
+							rest->coefMatX[(d*numPerDia__) + s][r][c] = -1;
+						}
+					}
+				rest->coefMatZ[u][d][s] = -1;
+			}
+		}
+	}
 }
 //------------------------------------------------------------------------------

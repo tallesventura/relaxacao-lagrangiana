@@ -22,7 +22,7 @@ typedef struct tDisciplina
 {
  char nome_[50]; // nome da disciplina
  int professor_; // id do professor
- int numPer_;    // número de períodos de oferta
+ int numPer_;    // número de períodos de oferta (número de aulas)
  int diaMin_;    // dias mínimos para distribuição
  int numAlu_;    // número de alunos
 }Disciplina;
@@ -61,19 +61,28 @@ typedef struct tRestricao
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
+typedef struct tRestJanHor {
+	int coefMatX[MAX_PER*MAX_DIA][MAX_SAL][MAX_DIS]; // matriz de coeficientes das variáveis x de uma restrição de janela de horário
+	int coefMatZ[MAX_TUR][MAX_DIA][MAX_PER];		 // matriz de coeficientes das variáveis z de uma restrição de janela de horário
+}RestJanHor;
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
 typedef struct tSolucao
 {
- // FO
+ // restrições SOFT
  int capSal_;    // número de aulas que violam a capacidade da sala
  int janHor_;    // número de janelas no horário das turmas
  int diaMin_;    // número "dias mínimos" não respeitados
  int salDif_;    // número de salas diferentes usadas para as disciplinas
+
+ // FO
  int funObj_;    // valor da função objetivo
 
- // restrições SOFT 
+ // restrições HARD 
  int vioNumAul_; // violações na restrição 1 - número de aulasA
  int vioAulSim_; // violações na restrição 2 - aulas simultaneas
- int vioDisSim_; // violações na restrição 3 - disciplinas simultaneas
+ int vioDisSim_; // violações na restrição 3 - disciplinas simultaneas (Duas aulas da mesma disciplina em um mesmo período)
  int vioProSim_; // violações na restrição 4 - professores simultaneos
  int vioTurSim_; // violações na restrição 5 - turmas simultaneas
 
@@ -98,38 +107,6 @@ typedef struct tSolucao
 //==============================================================================
 
 
-
-//============================= VARIÁVEIS GLOBAIS ==============================
-
-// ------------ Dados de entrada
-char nomInst__[150]; // nome da instância
-int numDis__;        // número de disciplinas 
-int numTur__;        // número de turmas
-int numPro__;        // número de professores
-int numSal__;        // número de salas
-int numDia__;        // número de dias
-int numPerDia__;     // número de períodos por dia
-int numPerTot__;     // número de períodos total
-int numRes__;        // número de restrições
-int numSol__;        // número de colunas
-int numVar__;        // número de variáveis
-Disciplina vetDisciplinas__[MAX_DIS];
-Turma vetTurmas__[MAX_TUR];
-Professor vetProfessores__[MAX_PRO];
-Sala vetSalas__[MAX_SAL];
-Restricao vetRestricoes__[MAX_RES];
-
-// ------------ CPLEX
-
-
-// ------------ Auxiliares
-int matDisTur__[MAX_DIS][MAX_TUR];
-int **matGCInicial__;
-
-//==============================================================================
-
-
-
 //===================================== MÉTODOS ================================
 void montarModeloPLI(char *arq);
 void lerInstancia(char *arq);
@@ -142,8 +119,10 @@ void escreverSol(Solucao &s,char *arq);
 
 void execUma(char* nomeInst);
 void execTodas();
-
-
+void initRestJanHor(RestJanHor *rest);
+void initVetJanHor();
+void montaMatCoefXFO();
+void montaCoefRestJanHor();
 //==============================================================================
 
 #endif
