@@ -9,4 +9,5 @@ Debug
 *.vcxproj.filters
 *.vcxproj.user
 vmc.h
+teste.txt
 annotation.h

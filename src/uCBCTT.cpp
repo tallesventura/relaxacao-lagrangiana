@@ -43,6 +43,7 @@ int matDisTur__[MAX_DIS][MAX_TUR]; // Dis x Cur; 1 se a disciplina d faz parte d
 
 RestJanHor *vetRestJanHor__; // Vetor com as restrições de janela horário
 int coefMatXFO[MAX_PER * MAX_DIA][MAX_SAL][MAX_DIS]; // Matriz de coeficientes das variáveis x da FO.
+double *vetAlpha;	// Vetor com os multiplicadores de Lagrange
 
 //char INST[50] = "comp";
 char INST[50] = "toy";
@@ -910,5 +911,34 @@ void montaCoefRestJanHor() {
 			}
 		}
 	}
+}
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+void montarModeloRelaxado(char *arq) {
+
+	FILE *f = fopen(arq, "w");
+
+	int numRest = numTur__*numDia__*numPerDia__;
+	// ------------------ FO
+	fprintf(f, "MIN\n");
+
+	for (int r = 0; r < numSal__; r++)
+	{
+		for (int p = 0; p < numPerTot__; p++)
+		{
+			for (int c = 0; c < numDis__; c++) {
+				
+				double aux = 0;
+				for (int i = 0; i < numRest; i++) {
+					aux -= vetRestJanHor__[0].coefMatX[p][r][c] * vetAlpha[i];
+				}
+
+				fprintf(f, "+ %d x_%d_%d_%d ", (PESOS[0] * coefMatXFO[p][r][c]) - aux, p, r, c);
+			}
+			fprintf(f, "\n");
+		}
+	}
+
 }
 //------------------------------------------------------------------------------

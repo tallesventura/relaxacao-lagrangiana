@@ -1,0 +1,25 @@
+Name: Toy3
+Courses: 3  
+Rooms: 2
+Days: 2
+Periods_per_day: 2
+Curricula: 1  
+Constraints: 2 
+
+COURSES:
+MatDiscr Edmar 2 2 40			
+Prog1 Geraldo 2 2 35
+TeoGrafos Edmar 2 3 20
+
+ROOMS:
+rA 38
+rB 32
+
+CURRICULA:
+Cur1 2 MatDiscr Prog1
+
+UNAVAILABILITY_CONSTRAINTS:
+Prog1 0 0		
+Prog1 1 1
+
+END.

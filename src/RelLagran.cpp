@@ -7,10 +7,18 @@
 #include <time.h>
 #include "..\lib\cplex\include\cplex.h"
 
+double *vetAlpha;	// Vetor com os multiplicadores de Lagrange
 
-void montarModeloRelaxado(char *arq) {
+void initMultiplicadores(double* mult, int numRest) {
 
-	//FILE *f = fopen(arq, "w");
+	for (int i = 0; i < numRest; i++) {
+		mult[i] = 0.0;
+	}
+}
+
+void montarModeloRelaxado(char *arq, int numRest, int coefMatXFO, RestJanHor *vetRestJanHor) {
 
 
 }
+
+	
