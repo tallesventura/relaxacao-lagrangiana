@@ -123,6 +123,8 @@ void initRestJanHor(RestJanHor *rest);
 void initVetJanHor();
 void montaMatCoefXFO();
 void montaCoefRestJanHor();
+void montarModeloRelaxado(char *arq);
+void initMultiplicadores();
 //==============================================================================
 
 #endif
