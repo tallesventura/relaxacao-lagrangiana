@@ -89,12 +89,21 @@ typedef struct tSolucao
  // CPLEX
  int numVar_;
  int numRes_;
+ double* vetViab_;  // vetor que armazena se as restrições foram satisfeitas
  double valSol_; // valor da solução obtida pelo CPLEX
  double bstNod_; // valor do melhor nó (lower bound)
  double tempo_;  // tempo de execução
 
  // vetor de solução (variáveis x)
  double vetSol_[MAX_PER*MAX_DIA*MAX_SAL*MAX_DIS];
+ // vetor de solução (variáveis z)
+ double vetSolZ_[MAX_TUR*MAX_DIA*MAX_PER];
+ // vetor de solução (variáveis q)
+ double vetSolQ_[MAX_DIS];
+ // vetor de solução (variáveis z)
+ double vetSolY_[MAX_DIS*MAX_SAL];
+ // vetor de solução (variáveis v)
+ double vetSolV_[MAX_DIS*MAX_DIA];
 
  // matriz de solução (período x dia x sala)
  int matSolSal_[MAX_PER][MAX_DIA][MAX_SAL];
@@ -125,6 +134,8 @@ void montaMatCoefXFO();
 void montaCoefRestJanHor();
 void montarModeloRelaxado(char *arq);
 void initMultiplicadores();
+int ehViavel(Solucao* s);
+void getValSol(Solucao &s, CPXENVptr env, CPXLPptr lp);
 //==============================================================================
 
 #endif

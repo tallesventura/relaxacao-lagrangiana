@@ -15,14 +15,14 @@
 #define RES_DIA_MIN // Restrição soft de dias mínimos
 #define RES_SAL_DIF // Restrição soft de salas diferentes
 
-#define RELAXAR
+//#define RELAXAR
 
 //#define REL_CAP_SAL // Relaxar restrição soft de capacidade das salas
 #define	REL_JAN_HOR // Relaxar restrição soft de janelas de horários
 //#define REL_DIA_MIN // Relaxar restrição soft de dias mínimos
 //#define REL_SAL_DIF // Relaxar restrição soft de salas diferentes
 
-#define VAL_INIT_ALPHA -1 // Valor usado para inicializar os valores dos multiplicadores de lagrange
+#define VAL_INIT_ALPHA 0 // Valor usado para inicializar os valores dos multiplicadores de lagrange
 
 //============================= VARIÁVEIS GLOBAIS ==============================
 
@@ -54,8 +54,8 @@ RestJanHor *vetRestJanHor__; // Vetor com as restrições de janela horário
 int coefMatXFO[MAX_PER * MAX_DIA][MAX_SAL][MAX_DIS]; // Matriz de coeficientes das variáveis x da FO.
 double *vetAlpha;	// Vetor com os multiplicadores de Lagrange
 
-char INST[50] = "comp";
-//char INST[50] = "toy";
+//char INST[50] = "comp";
+char INST[50] = "toy";
 int PESOS[4] = { 1,2,5,1 };
 
 //==============================================================================
@@ -66,7 +66,7 @@ int main(int argc, char *argv[])
 {
 	char nomeInst[10];
 	strcpy_s(nomeInst, INST);
-	strcat_s(nomeInst, "01");
+	strcat_s(nomeInst, "3");
 
 	execUma(nomeInst);
 	//execTodas();
@@ -169,6 +169,37 @@ void execTodas() {
 
 	}
 }
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+void getValSol(Solucao &s, CPXENVptr env, CPXLPptr lp) {
+
+	int sts, iniX, fimX, iniZ, fimZ, iniQ, fimQ, iniY, fimY, iniV, fimV;
+
+	iniX = 0;
+	fimX = numPerTot__*numSal__*numDis__ - 1;
+	iniZ = fimX + 1;
+	fimZ = iniZ + (numTur__*numDia__*numPerDia__) - 1;
+	iniQ = fimZ + 1;
+	fimQ = iniQ + numDis__ - 1;
+	iniY = fimQ + 1;
+	fimY = iniY + (numSal__*numDis__) - 1;
+	iniV = fimY + 2;
+	fimV = iniV + (numDia__*numDis__) - 1;
+
+	// Variáveis x
+	sts = CPXgetmipx(env, lp, s.vetSol_, iniX, fimX);
+	// Variáveis z
+	sts = CPXgetmipx(env, lp, s.vetSolZ_, iniZ, fimZ);
+	// Variáveis q
+	sts = CPXgetmipx(env, lp, s.vetSolQ_, iniQ, fimQ);
+	// Variáveis y
+	sts = CPXgetmipx(env, lp, s.vetSolY_, iniY, fimY);
+	// Variáveis v
+	sts = CPXgetmipx(env, lp, s.vetSolV_, iniV, fimV);
+}
+
+//------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
 void execCpx(Solucao &s, char *arq)
@@ -189,7 +220,23 @@ void execCpx(Solucao &s, char *arq)
 	s.tempo_ = (double)h / CLOCKS_PER_SEC;
 	sts = CPXgetmipobjval(env, lp, &s.valSol_);
 	sts = CPXgetbestobjval(env, lp, &s.bstNod_);
-	sts = CPXgetmipx(env, lp, s.vetSol_, 0, (numPerTot__*numSal__*numDis__ - 1));
+
+	// Pegando os valores das variáveis
+	getValSol(s, env, lp);
+
+	s.vetViab_ = (double*) malloc(s.numRes_ * sizeof(double));
+	sts = CPXgetrowinfeas(env, lp, NULL, s.vetViab_, 0, s.numRes_ - 1);
+	printf("sts getrowinfeas: %d\n", sts);
+	
+	int pfeas, dfeas;
+	sts = CPXsolninfo(env, lp, NULL, NULL, &pfeas, &dfeas);
+	if (sts == 0) {
+		printf("\nPrimal feasible: %d\n", pfeas);
+		printf("Dual feasible: %d\n", dfeas);
+	}
+
+	// Testar os valores das variáveis (imprimir)
+
 	sts = CPXfreeprob(env, &lp);
 	sts = CPXcloseCPLEX(&env);
 }
@@ -281,7 +328,6 @@ void escreverSol(Solucao &s, char *arq)
 	//------------------------------------------------------------- 
 	// verificar a solucao
 	// HARD
-
 	s.vioNumAul_ = 0;
 	for (int c = 0; c < numDis__; c++)
 	{
@@ -396,6 +442,12 @@ void escreverSol(Solucao &s, char *arq)
 		}
 		s.salDif_ += aux - 1;
 	}
+
+	if (ehViavel(&s))
+		fprintf(f, "SOLUÇÃO VIÁVEL\n");
+	else
+		fprintf(f, "SOLUÇÃO INVIÁVEL\n");
+
 	s.funObj_ = PESOS[0] * s.capSal_ + PESOS[1] * s.janHor_ + PESOS[2] * s.diaMin_ + PESOS[3] * s.salDif_;
 	fprintf(f, "\n\n>>> RESULTADOS CALCULADOS\n\n", s.valSol_);
 	fprintf(f, "Func. obj.....: %d\n", s.funObj_);
@@ -1227,5 +1279,19 @@ void montarModeloRelaxado(char *arq) {
 #endif
 	fprintf(f, "\nEND");
 	fclose(f);
+}
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+int ehViavel(Solucao* s) {
+
+	for (int i = 0; i < s->numRes_; i++) {
+		if (s->vetViab_[i] != 0) {
+			printf("pos: %d\n", i);
+			printf("val: %f\n", s->vetViab_[i]);
+			return false;
+		}
+	}
+	return true;
 }
 //------------------------------------------------------------------------------
