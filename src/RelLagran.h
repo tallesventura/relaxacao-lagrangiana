@@ -1,18 +1,13 @@
 #ifndef RelLagranH
 #define RelLagranH
 
-//================================ ESTRUTURAS ================================\\
+#include "uCBCTT.h";
+
+#define VAL_INIT_ALPHA 0 // Valor usado para inicializar os valores dos multiplicadores de lagrange
 
 
-//============================================================================\\
+// MÉTODOS ===================================================================================
 
-
-//===================================== MÉTODOS ================================
-
-//------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
-
-//==============================================================================
+Solucao* execRelLagran(double* vetAlpha, int tamAlpha, Instancia* inst, RestJanHor *vetRestJanHor, int coefMatXFO[MAX_PER * MAX_DIA][MAX_SAL][MAX_DIS]);
 
 #endif // RelLagran

@@ -115,29 +115,47 @@ typedef struct tSolucao
 }Solucao;
 //------------------------------------------------------------------------------
 
+//------------------------------------------------------------------------------
+typedef struct tInstancia {
+	char nomInst__[150]; // nome da instância
+	int numDis__;        // número de disciplinas 
+	int numTur__;        // número de turmas
+	int numPro__;        // número de professores
+	int numSal__;        // número de salas
+	int numDia__;        // número de dias
+	int numPerDia__;     // número de períodos por dia
+	int numPerTot__;     // número de períodos total
+	int numRes__;        // número de restrições
+	int numSol__;        // número de colunas
+	int numVar__;        // número de variáveis
+	Disciplina vetDisciplinas__[MAX_DIS];
+	Turma vetTurmas__[MAX_TUR];
+	Professor vetProfessores__[MAX_PRO];
+	Sala vetSalas__[MAX_SAL];
+	Restricao vetRestricoes__[MAX_RES];
+}Instancia;
+//------------------------------------------------------------------------------
+
 //==============================================================================
 
 
 //===================================== MÉTODOS ================================
-void montarModeloPLI(char *arq);
-void lerInstancia(char *arq);
-void lerSolucoesIniciais();
-void desaloca();
-void testarEntrada();
+void montarModeloPLI(char *arq, Instancia* inst);
+Instancia* lerInstancia(char *arq);
 
-void execCpx(Solucao &s,char *arq);
-void escreverSol(Solucao &s,char *arq);
+void execCpx(Solucao &s, char *arq, Instancia* inst);
+void escreverSol(Solucao &s, char *arq, Instancia* inst);
 
 void execUma(char* nomeInst);
 void execTodas();
 void initRestJanHor(RestJanHor *rest);
-void initVetJanHor();
-void montaMatCoefXFO();
-void montaCoefRestJanHor();
-void montarModeloRelaxado(char *arq);
-void initMultiplicadores();
-double* getVetViabJanHor(Solucao &sol);
-void getValSol(Solucao *s, CPXENVptr env, CPXLPptr lp);
+void initVetJanHor(Instancia* inst);
+void montaMatCoefXFO(Instancia* inst);
+void montaCoefRestJanHor(Instancia* inst);
+void montarModeloRelaxado(char *arq, Instancia* inst, double* vetAlpha);
+void initMultiplicadores(double* vetMult, int tam, double val);
+int getVetViabJanHor(Solucao &sol, double* vetViabJanHor, Instancia* inst);
+void getValSol(Solucao *sol, CPXENVptr env, CPXLPptr lp, Instancia* inst);
 //==============================================================================
 
 #endif

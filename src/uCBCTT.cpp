@@ -23,37 +23,12 @@
 //#define REL_DIA_MIN // Relaxar restrição soft de dias mínimos
 //#define REL_SAL_DIF // Relaxar restrição soft de salas diferentes
 
-#define VAL_INIT_ALPHA 0 // Valor usado para inicializar os valores dos multiplicadores de lagrange
-
-//============================= VARIÁVEIS GLOBAIS ==============================
-
-// ------------ Dados de entrada
-char nomInst__[150]; // nome da instância
-int numDis__;        // número de disciplinas 
-int numTur__;        // número de turmas
-int numPro__;        // número de professores
-int numSal__;        // número de salas
-int numDia__;        // número de dias
-int numPerDia__;     // número de períodos por dia
-int numPerTot__;     // número de períodos total
-int numRes__;        // número de restrições
-int numSol__;        // número de colunas
-int numVar__;        // número de variáveis
-Disciplina vetDisciplinas__[MAX_DIS];
-Turma vetTurmas__[MAX_TUR];
-Professor vetProfessores__[MAX_PRO];
-Sala vetSalas__[MAX_SAL];
-Restricao vetRestricoes__[MAX_RES];
-
-// ------------ CPLEX
-
 
 // ------------ Auxiliares
 int matDisTur__[MAX_DIS][MAX_TUR]; // Dis x Cur; 1 se a disciplina d faz parte do currículo c; 0 caso contrário
 
 RestJanHor *vetRestJanHor__; // Vetor com as restrições de janela horário
 int coefMatXFO[MAX_PER * MAX_DIA][MAX_SAL][MAX_DIS]; // Matriz de coeficientes das variáveis x da FO.
-double *vetAlpha;	// Vetor com os multiplicadores de Lagrange
 
 //char INST[50] = "comp";
 char INST[50] = "toy";
@@ -67,7 +42,7 @@ int main(int argc, char *argv[])
 {
 	char nomeInst[10];
 	strcpy_s(nomeInst, INST);
-	strcat_s(nomeInst, "3");
+	//strcat_s(nomeInst, "3");
 
 	execUma(nomeInst);
 	//execTodas();
@@ -96,7 +71,7 @@ void execUma(char* nomeInst) {
 	strcat_s(aux, nomeInst);
 	strcat_s(aux, ".ctt");
 	printf("%s", aux);
-	lerInstancia(aux);
+	Instancia* inst = lerInstancia(aux);
 	//lerSolucoesIniciais();
 
 	//testarEntrada();
@@ -107,22 +82,25 @@ void execUma(char* nomeInst) {
 #endif 
 	strcat_s(aux, ".lp");
 #ifdef RELAXAR
-	initVetJanHor();
-	montaMatCoefXFO();
-	montaCoefRestJanHor();
-	initMultiplicadores();
-	montarModeloRelaxado(aux);
+	int numRest = inst->numTur__*inst->numDia__*inst->numPerDia__;
+	initVetJanHor(inst);
+	montaMatCoefXFO(inst);
+	montaCoefRestJanHor(inst);
+	double* vetAlpha = (double*) malloc(numRest*sizeof(double));
+	initMultiplicadores(vetAlpha,numRest,VAL_INIT_ALPHA);
+	montarModeloRelaxado(aux,inst,vetAlpha);
 #else
 	montarModeloPLI(aux);
 #endif
-	execCpx(sol, aux);
+	execCpx(sol, aux, inst);
 	strcpy_s(aux, PATH_INST);
 	strcat_s(aux, nomeInst);
 #ifndef RES_SOFT
 	strcat_s(aux, "-H");
 #endif 
 	strcat_s(aux, ".sol");
-	escreverSol(sol, aux);
+	escreverSol(sol, aux, inst);
+	free(inst);
 }
 
 void execTodas() {
@@ -148,7 +126,7 @@ void execTodas() {
 		}
 		strcat_s(aux, nomeInst);
 		strcat_s(aux, ".ctt");
-		lerInstancia(aux);
+		Instancia* inst = lerInstancia(aux);
 		//lerSolucoesIniciais();
 
 		//testarEntrada();
@@ -158,35 +136,35 @@ void execTodas() {
 		strcat_s(aux, "-H");
 #endif 
 		strcat_s(aux, ".lp");
-		montarModeloPLI(aux);
-		execCpx(sol, aux);
+		montarModeloPLI(aux,inst);
+		execCpx(sol, aux, inst);
 		strcpy_s(aux, PATH_INST);
 		strcat_s(aux, nomeInst);
 #ifndef RES_SOFT
 		strcat_s(aux, "-H");
 #endif 
 		strcat_s(aux, ".sol");
-		escreverSol(sol, aux);
-
+		escreverSol(sol, aux, inst);
+		free(inst);
 	}
 }
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-void getValSol(Solucao *sol, CPXENVptr env, CPXLPptr lp) {
+void getValSol(Solucao *sol, CPXENVptr env, CPXLPptr lp, Instancia* inst) {
 
 	int sts, iniX, fimX, iniZ, fimZ, iniQ, fimQ, iniY, fimY, iniV, fimV;
 
 	iniX = 0;
-	fimX = numPerTot__*numSal__*numDis__ - 1;
+	fimX = inst->numPerTot__*inst->numSal__*inst->numDis__ - 1;
 	iniZ = fimX + 1;
-	fimZ = iniZ + (numTur__*numDia__*numPerDia__) - 1;
+	fimZ = iniZ + (inst->numTur__*inst->numDia__*inst->numPerDia__) - 1;
 	iniQ = fimZ + 1;
-	fimQ = iniQ + numDis__ - 1;
+	fimQ = iniQ + inst->numDis__ - 1;
 	iniY = fimQ + 1;
-	fimY = iniY + (numSal__*numDis__) - 1;
+	fimY = iniY + (inst->numSal__*inst->numDis__) - 1;
 	iniV = fimY + 2;
-	fimV = iniV + (numDia__*numDis__) - 1;
+	fimV = iniV + (inst->numDia__*inst->numDis__) - 1;
 
 	// Variáveis x
 	sts = CPXgetmipx(env, lp, sol->vetSol_, iniX, fimX);
@@ -202,7 +180,7 @@ void getValSol(Solucao *sol, CPXENVptr env, CPXLPptr lp) {
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-void execCpx(Solucao &s, char *arq)
+void execCpx(Solucao &s, char *arq, Instancia* inst)
 {
 	int sts;
 	clock_t h;
@@ -222,16 +200,26 @@ void execCpx(Solucao &s, char *arq)
 	sts = CPXgetbestobjval(env, lp, &s.bstNod_);
 
 	// Pegando os valores das variáveis
-	getValSol(&s, env, lp);
+	getValSol(&s, env, lp, inst);
 
 	int pos = 0;
 	printf("\n");
-	for (int c = 0; c < numDis__; c++) {
+	for (int c = 0; c < inst->numDis__; c++) {
 		printf("q_%d = %.2f\n", c, s.vetSolQ_[c]);
 	}
 	printf("\n");
 
-	double* viabJanHor = getVetViabJanHor(s);
+	double* vetViabJanHor = (double*)malloc(inst->numTur__*inst->numDia__*inst->numPerDia__ * sizeof(double));
+	int viavel = getVetViabJanHor(s, vetViabJanHor, inst);
+	if (viavel) {
+		printf("JanHor VIAVEL\n");
+	}
+	else {
+		printf("JanHor INVIAVEL:\n");
+		for (int i = 0; i < inst->numTur__*inst->numDia__*inst->numPerDia__; i++) {
+			printf("RES_%d: %.2f\n", i, vetViabJanHor[i]);
+		}
+	}
 	
 	int pfeas, dfeas;
 	sts = CPXsolninfo(env, lp, NULL, NULL, &pfeas, &dfeas);
@@ -240,15 +228,13 @@ void execCpx(Solucao &s, char *arq)
 		printf("Dual feasible: %d\n", dfeas);
 	}
 
-	// Testar os valores das variáveis (imprimir)
-
 	sts = CPXfreeprob(env, &lp);
 	sts = CPXcloseCPLEX(&env);
 }
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-void escreverSol(Solucao &s, char *arq)
+void escreverSol(Solucao &s, char *arq, Instancia* inst)
 {
 	int pos, dia, per, aux;
 	FILE *f = fopen(arq, "w");
@@ -265,23 +251,23 @@ void escreverSol(Solucao &s, char *arq)
 	//------------------------------------------------------------- 
 	// preencher a solucao
 	fprintf(f, "\n\n>>> SOLUCAO (<periodo><sala><disciplina>)\n\n", s.tempo_);
-	for (int p = 0; p < numPerDia__; p++)
-		for (int d = 0; d < numDia__; d++)
-			for (int r = 0; r < numSal__; r++)
+	for (int p = 0; p < inst->numPerDia__; p++)
+		for (int d = 0; d < inst->numDia__; d++)
+			for (int r = 0; r < inst->numSal__; r++)
 				s.matSolSal_[p][d][r] = -1;
-	for (int p = 0; p < numPerDia__; p++)
-		for (int d = 0; d < numDia__; d++)
-			for (int u = 0; u < numTur__; u++)
+	for (int p = 0; p < inst->numPerDia__; p++)
+		for (int d = 0; d < inst->numDia__; d++)
+			for (int u = 0; u < inst->numTur__; u++)
 				s.matSolTur_[p][d][u] = -1;
 	pos = 0;
-	for (int r = 0; r < numSal__; r++)
-		for (int p = 0; p < numPerTot__; p++)
-			for (int c = 0; c < numDis__; c++)
+	for (int r = 0; r < inst->numSal__; r++)
+		for (int p = 0; p < inst->numPerTot__; p++)
+			for (int c = 0; c < inst->numDis__; c++)
 			{
 				if (s.vetSol_[pos] > 0)
 				{
-					dia = p / numPerDia__;
-					per = p % numPerDia__;
+					dia = p / inst->numPerDia__;
+					per = p % inst->numPerDia__;
 					fprintf(f, "x_%d_%d_%d = %.2f\n", p, r, c, s.vetSol_[pos]);
 					if (s.matSolSal_[per][dia][r] != -1)
 					{
@@ -290,7 +276,7 @@ void escreverSol(Solucao &s, char *arq)
 					}
 					else
 						s.matSolSal_[per][dia][r] = c;
-					for (int u = 0; u < numTur__; u++)
+					for (int u = 0; u < inst->numTur__; u++)
 					{
 						if (matDisTur__[c][u] == 1)
 						{
@@ -307,24 +293,24 @@ void escreverSol(Solucao &s, char *arq)
 				pos++;
 			}
 	fprintf(f, "\n");
-	for (int r = 0; r < numSal__; r++)
+	for (int r = 0; r < inst->numSal__; r++)
 	{
 		fprintf(f, "SALA %d\n", r);
-		for (int p = 0; p < numPerDia__; p++)
+		for (int p = 0; p < inst->numPerDia__; p++)
 		{
-			for (int d = 0; d < numDia__; d++)
+			for (int d = 0; d < inst->numDia__; d++)
 				fprintf(f, "%d  ", s.matSolSal_[p][d][r]);
 			fprintf(f, "\n");
 		}
 		fprintf(f, "\n");
 	}
 	fprintf(f, "\n");
-	for (int u = 0; u < numTur__; u++)
+	for (int u = 0; u < inst->numTur__; u++)
 	{
 		fprintf(f, "TURMA %d\n", u);
-		for (int p = 0; p < numPerDia__; p++)
+		for (int p = 0; p < inst->numPerDia__; p++)
 		{
-			for (int d = 0; d < numDia__; d++)
+			for (int d = 0; d < inst->numDia__; d++)
 				fprintf(f, "%d  ", s.matSolTur_[p][d][u]);
 			fprintf(f, "\n");
 		}
@@ -334,39 +320,39 @@ void escreverSol(Solucao &s, char *arq)
 	// verificar a solucao
 	// HARD
 	s.vioNumAul_ = 0;
-	for (int c = 0; c < numDis__; c++)
+	for (int c = 0; c < inst->numDis__; c++)
 	{
 		aux = 0;
-		for (int r = 0; r < numSal__; r++)
+		for (int r = 0; r < inst->numSal__; r++)
 		{
-			for (int p = 0; p < numPerDia__; p++)
-				for (int d = 0; d < numDia__; d++)
+			for (int p = 0; p < inst->numPerDia__; p++)
+				for (int d = 0; d < inst->numDia__; d++)
 					if (s.matSolSal_[p][d][r] == c)
 						aux++;
 		}
-		s.vioNumAul_ += abs(vetDisciplinas__[c].numPer_ - aux);
+		s.vioNumAul_ += abs(inst->vetDisciplinas__[c].numPer_ - aux);
 	}
 
 	s.vioAulSim_ = 0;
 	s.vioDisSim_ = 0;
 	s.vioProSim_ = 0;
 	s.vioTurSim_ = 0;
-	for (int r = 0; r < numSal__; r++)
+	for (int r = 0; r < inst->numSal__; r++)
 	{
-		for (int d = 0; d < numDia__; d++)
+		for (int d = 0; d < inst->numDia__; d++)
 		{
-			for (int p = 0; p < numPerDia__; p++)
+			for (int p = 0; p < inst->numPerDia__; p++)
 			{
 				if (s.matSolSal_[p][d][r] != -1)
-					for (int r2 = r + 1; r2 < numSal__; r2++)
+					for (int r2 = r + 1; r2 < inst->numSal__; r2++)
 					{
 						if (s.matSolSal_[p][d][r2] != -1)
 						{
 							if (s.matSolSal_[p][d][r2] == s.matSolSal_[p][d][r])
 								s.vioDisSim_++;
-							if (vetDisciplinas__[s.matSolSal_[p][d][r2]].professor_ == vetDisciplinas__[s.matSolSal_[p][d][r]].professor_)
+							if (inst->vetDisciplinas__[s.matSolSal_[p][d][r2]].professor_ == inst->vetDisciplinas__[s.matSolSal_[p][d][r]].professor_)
 								s.vioProSim_++;
-							for (int u = 0; u < numTur__; u++)
+							for (int u = 0; u < inst->numTur__; u++)
 								if ((matDisTur__[s.matSolSal_[p][d][r2]][u] == 1) && (matDisTur__[s.matSolSal_[p][d][r]][u] == 1))
 									s.vioTurSim_++;
 						}
@@ -376,42 +362,40 @@ void escreverSol(Solucao &s, char *arq)
 	}
 	// SOFT
 	s.capSal_ = 0;
-	for (int r = 0; r < numSal__; r++)
-		for (int p = 0; p < numPerDia__; p++)
-			for (int d = 0; d < numDia__; d++)
+	for (int r = 0; r < inst->numSal__; r++)
+		for (int p = 0; p < inst->numPerDia__; p++)
+			for (int d = 0; d < inst->numDia__; d++)
 			{
 				if (s.matSolSal_[p][d][r] != -1)
-					if (vetDisciplinas__[s.matSolSal_[p][d][r]].numAlu_ > vetSalas__[r].capacidade_)
-						s.capSal_+= vetDisciplinas__[s.matSolSal_[p][d][r]].numAlu_ - vetSalas__[r].capacidade_;
+					if (inst->vetDisciplinas__[s.matSolSal_[p][d][r]].numAlu_ > inst->vetSalas__[r].capacidade_)
+						s.capSal_+= inst->vetDisciplinas__[s.matSolSal_[p][d][r]].numAlu_ - inst->vetSalas__[r].capacidade_;
 			}
 
 	s.janHor_ = 0;
-#ifndef RELAXAR
-	for (int u = 0; u < numTur__; u++)
+	for (int u = 0; u < inst->numTur__; u++)
 	{
-		for (int d = 0; d < numDia__; d++)
+		for (int d = 0; d < inst->numDia__; d++)
 		{
 			if ((s.matSolTur_[0][d][u] != -1) && (s.matSolTur_[1][d][u] == -1))
 				s.janHor_++;
-			if ((s.matSolTur_[numPerDia__ - 1][d][u] != -1) && (s.matSolTur_[numPerDia__ - 2][d][u] == -1))
+			if ((s.matSolTur_[inst->numPerDia__ - 1][d][u] != -1) && (s.matSolTur_[inst->numPerDia__ - 2][d][u] == -1))
 				s.janHor_++;
-			for (int p = 2; p < numPerDia__; p++)
+			for (int p = 2; p < inst->numPerDia__; p++)
 				if ((s.matSolTur_[p - 1][d][u] != -1) && (s.matSolTur_[p - 2][d][u] == -1) && (s.matSolTur_[p][d][u] == -1))
 					s.janHor_++;
 		}
 	}
-#endif // !RELAXAR
 
 	s.diaMin_ = 0;
-	for (int c = 0; c < numDis__; c++)
+	for (int c = 0; c < inst->numDis__; c++)
 	{
 		aux = 0;
-		for (int d = 0; d < numDia__; d++)
+		for (int d = 0; d < inst->numDia__; d++)
 		{
 			pos = 0;
-			for (int p = 0; p < numPerDia__; p++)
+			for (int p = 0; p < inst->numPerDia__; p++)
 			{
-				for (int r = 0; r < numSal__; r++)
+				for (int r = 0; r < inst->numSal__; r++)
 				{
 					if (s.matSolSal_[p][d][r] == c)
 					{
@@ -424,19 +408,19 @@ void escreverSol(Solucao &s, char *arq)
 			}
 			aux += pos;
 		}
-		if (aux < vetDisciplinas__[c].diaMin_)
-			s.diaMin_+= vetDisciplinas__[c].diaMin_ - aux;
+		if (aux < inst->vetDisciplinas__[c].diaMin_)
+			s.diaMin_+= inst->vetDisciplinas__[c].diaMin_ - aux;
 	}
 	s.salDif_ = 0;
-	for (int c = 0; c < numDis__; c++)
+	for (int c = 0; c < inst->numDis__; c++)
 	{
 		aux = 0;
-		for (int r = 0; r < numSal__; r++)
+		for (int r = 0; r < inst->numSal__; r++)
 		{
 			pos = 0;
-			for (int d = 0; d < numDia__; d++)
+			for (int d = 0; d < inst->numDia__; d++)
 			{
-				for (int p = 0; p < numPerDia__; p++)
+				for (int p = 0; p < inst->numPerDia__; p++)
 				{
 					if (s.matSolSal_[p][d][r] == c)
 					{
@@ -471,7 +455,7 @@ void escreverSol(Solucao &s, char *arq)
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-void montarModeloPLI(char *arq)
+void montarModeloPLI(char *arq, Instancia* inst)
 {
 	int val;
 	FILE *f = fopen(arq, "w");
@@ -492,13 +476,13 @@ void montarModeloPLI(char *arq)
 #else
 #ifdef RES_CAP_SAL
 	fprintf(f, "\n\\Capacidade das salas\n");
-	for (int r = 0; r < numSal__; r++)
+	for (int r = 0; r < inst->numSal__; r++)
 	{
-		for (int p = 0; p < numPerTot__; p++)
+		for (int p = 0; p < inst->numPerTot__; p++)
 		{
-			for (int c = 0; c < numDis__; c++)
-				if (vetDisciplinas__[c].numAlu_ > vetSalas__[r].capacidade_)
-					fprintf(f, "+ %d x_%d_%d_%d ", PESOS[0] * (vetDisciplinas__[c].numAlu_ - vetSalas__[r].capacidade_), p, r, c);
+			for (int c = 0; c < inst->numDis__; c++)
+				if (inst->vetDisciplinas__[c].numAlu_ > inst->vetSalas__[r].capacidade_)
+					fprintf(f, "+ %d x_%d_%d_%d ", PESOS[0] * (inst->vetDisciplinas__[c].numAlu_ - inst->vetSalas__[r].capacidade_), p, r, c);
 				else
 					fprintf(f, "+ 0 x_%d_%d_%d ", p, r, c);
 			fprintf(f, "\n");
@@ -508,11 +492,11 @@ void montarModeloPLI(char *arq)
 
 #ifdef RES_JAN_HOR
 	fprintf(f, "\n\n\\Janelas de horários\n");
-	for (int u = 0; u < numTur__; u++)
+	for (int u = 0; u < inst->numTur__; u++)
 	{
-		for (int d = 0; d < numDia__; d++)
+		for (int d = 0; d < inst->numDia__; d++)
 		{
-			for (int s = 0; s < numPerDia__; s++)
+			for (int s = 0; s < inst->numPerDia__; s++)
 				fprintf(f, "+ %d z_%d_%d_%d ", PESOS[1], u, d, s);
 			fprintf(f, "\n");
 		}
@@ -521,21 +505,21 @@ void montarModeloPLI(char *arq)
 
 #ifdef RES_DIA_MIN
 	fprintf(f, "\n\\Dias mínimos\n");
-	for (int c = 0; c < numDis__; c++)
+	for (int c = 0; c < inst->numDis__; c++)
 		fprintf(f, "+ %d q_%d ", PESOS[2], c);
 #endif
 
 #ifdef RES_SAL_DIF
 	fprintf(f, "\n\n\\Salas diferentes\n");
-	for (int c = 0; c < numDis__; c++)
+	for (int c = 0; c < inst->numDis__; c++)
 	{
-		for (int r = 0; r < numSal__; r++)
+		for (int r = 0; r < inst->numSal__; r++)
 			fprintf(f, "+ %d y_%d_%d ", PESOS[3], r, c);
 		fprintf(f, "\n");
 	}
 #endif
 
-	val = PESOS[3] * numDis__;
+	val = PESOS[3] * inst->numDis__;
 	fprintf(f, "- val\n");
 	fprintf(f, "\nST\n");
 	fprintf(f, "\n\\Valor constante\n");
@@ -543,48 +527,48 @@ void montarModeloPLI(char *arq)
 #endif
 	fprintf(f, "\n\\ ------------------------------------ HARD------------------------------------\n");
 	fprintf(f, "\n\\R1 - Número de aulas\n");
-	for (int c = 0; c < numDis__; c++)
+	for (int c = 0; c < inst->numDis__; c++)
 	{
-		for (int p = 0; p < numPerTot__; p++)
-			for (int r = 0; r < numSal__; r++)
+		for (int p = 0; p < inst->numPerTot__; p++)
+			for (int r = 0; r < inst->numSal__; r++)
 				fprintf(f, "+ x_%d_%d_%d ", p, r, c);
-		fprintf(f, "= %d\n", vetDisciplinas__[c].numPer_);
+		fprintf(f, "= %d\n", inst->vetDisciplinas__[c].numPer_);
 	}
 	fprintf(f, "\n\\R2 - Aulas na mesma sala no mesmo período\n");
-	for (int p = 0; p < numPerTot__; p++)
-		for (int r = 0; r < numSal__; r++)
+	for (int p = 0; p < inst->numPerTot__; p++)
+		for (int r = 0; r < inst->numSal__; r++)
 		{
-			for (int c = 0; c < numDis__; c++)
+			for (int c = 0; c < inst->numDis__; c++)
 				fprintf(f, "+ x_%d_%d_%d ", p, r, c);
 			fprintf(f, "<= 1\n");
 		}
 	fprintf(f, "\n\\R3 - Aulas de uma disciplina no mesmo período\n");
-	for (int p = 0; p < numPerTot__; p++)
-		for (int c = 0; c < numDis__; c++)
+	for (int p = 0; p < inst->numPerTot__; p++)
+		for (int c = 0; c < inst->numDis__; c++)
 		{
-			for (int r = 0; r < numSal__; r++)
+			for (int r = 0; r < inst->numSal__; r++)
 				fprintf(f, "+ x_%d_%d_%d ", p, r, c);
 			fprintf(f, "<= 1\n");
 		}
 	fprintf(f, "\n\\R4 - Aulas de um professor no mesmo período\n");
-	for (int p = 0; p < numPerTot__; p++)
-		for (int t = 0; t < numPro__; t++)
+	for (int p = 0; p < inst->numPerTot__; p++)
+		for (int t = 0; t < inst->numPro__; t++)
 		{
-			for (int r = 0; r < numSal__; r++)
-				for (int c = 0; c < numDis__; c++)
-					if (vetDisciplinas__[c].professor_ == t)
+			for (int r = 0; r < inst->numSal__; r++)
+				for (int c = 0; c < inst->numDis__; c++)
+					if (inst->vetDisciplinas__[c].professor_ == t)
 						fprintf(f, "+ x_%d_%d_%d ", p, r, c);
 			fprintf(f, "<= 1\n");
 		}
 	fprintf(f, "\n\\R5 - Aulas de uma turma no mesmo período\n");
-	for (int p = 0; p < numPerTot__; p++)
-		for (int u = 0; u < numTur__; u++)
+	for (int p = 0; p < inst->numPerTot__; p++)
+		for (int u = 0; u < inst->numTur__; u++)
 		{
-			for (int r = 0; r < numSal__; r++)
-				for (int c = 0; c < numDis__; c++)
+			for (int r = 0; r < inst->numSal__; r++)
+				for (int c = 0; c < inst->numDis__; c++)
 				{
-					for (int k = 0; k < vetTurmas__[u].numDis_; k++)
-						if (vetTurmas__[u].vetDis_[k] == c)
+					for (int k = 0; k < inst->vetTurmas__[u].numDis_; k++)
+						if (inst->vetTurmas__[u].vetDis_[k] == c)
 						{
 							fprintf(f, "+ x_%d_%d_%d ", p, r, c);
 							break;
@@ -593,85 +577,85 @@ void montarModeloPLI(char *arq)
 			fprintf(f, "<= 1\n");
 		}
 	fprintf(f, "\n\\R6 - Restrições de oferta (alocação)\n");
-	for (int s = 0; s < numRes__; s++)
+	for (int s = 0; s < inst->numRes__; s++)
 	{
-		for (int r = 0; r < numSal__; r++)
-			fprintf(f, "+ x_%d_%d_%d ", vetRestricoes__[s].periodo_, r, vetRestricoes__[s].disciplina_);
+		for (int r = 0; r < inst->numSal__; r++)
+			fprintf(f, "+ x_%d_%d_%d ", inst->vetRestricoes__[s].periodo_, r, inst->vetRestricoes__[s].disciplina_);
 		fprintf(f, "= 0\n");
 	}
 #ifdef RES_SOFT
 	fprintf(f, "\n\\ ------------------------------------ SOFT------------------------------------\n");
 	fprintf(f, "\n\\R7 - Número de salas usadas por disciplina\n");
-	for (int c = 0; c < numDis__; c++)
+	for (int c = 0; c < inst->numDis__; c++)
 	{
-		for (int d = 0; d < numDia__; d++)
-			for (int p = (d*numPerDia__); p < (d*numPerDia__) + numPerDia__; p++)
+		for (int d = 0; d < inst->numDia__; d++)
+			for (int p = (d*inst->numPerDia__); p < (d*inst->numPerDia__) + inst->numPerDia__; p++)
 			{
-				for (int r = 0; r < numSal__; r++)
+				for (int r = 0; r < inst->numSal__; r++)
 					fprintf(f, "+ x_%d_%d_%d ", p, r, c);
 				fprintf(f, "- v_%d_%d <= 0\n", d, c);
 			}
 		fprintf(f, "\n");
 	}
 	fprintf(f, "\n\\R8 - Número de salas usadas por disciplina\n");
-	for (int c = 0; c < numDis__; c++)
+	for (int c = 0; c < inst->numDis__; c++)
 	{
-		for (int d = 0; d < numDia__; d++)
+		for (int d = 0; d < inst->numDia__; d++)
 		{
-			for (int r = 0; r < numSal__; r++)
-				for (int p = (d*numPerDia__); p < (d*numPerDia__) + numPerDia__; p++)
+			for (int r = 0; r < inst->numSal__; r++)
+				for (int p = (d*inst->numPerDia__); p < (d*inst->numPerDia__) + inst->numPerDia__; p++)
 					fprintf(f, "+ x_%d_%d_%d ", p, r, c);
 			fprintf(f, "- v_%d_%d >= 0\n", d, c);
 		}
 		fprintf(f, "\n");
 	}
 	fprintf(f, "\n\\R9 - Dias mínimos\n");
-	for (int c = 0; c < numDis__; c++)
+	for (int c = 0; c < inst->numDis__; c++)
 	{
-		for (int d = 0; d < numDia__; d++)
+		for (int d = 0; d < inst->numDia__; d++)
 			fprintf(f, "+ v_%d_%d ", d, c);
-		fprintf(f, "+ q_%d >= %d\n", c, vetDisciplinas__[c].diaMin_);
+		fprintf(f, "+ q_%d >= %d\n", c, inst->vetDisciplinas__[c].diaMin_);
 	}
 	fprintf(f, "\n\\R10 a R13+#PER_DIA - Janelas no horário das turmas\n");
-	for (int u = 0; u < numTur__; u++)
+	for (int u = 0; u < inst->numTur__; u++)
 	{
-		for (int d = 0; d < numDia__; d++)
+		for (int d = 0; d < inst->numDia__; d++)
 		{
-			for (int c = 0; c < numDis__; c++)
+			for (int c = 0; c < inst->numDis__; c++)
 				if (matDisTur__[c][u] == 1)
 				{
-					for (int r = 0; r < numSal__; r++)
-						fprintf(f, "+ x_%d_%d_%d - x_%d_%d_%d ", (d*numPerDia__), r, c, (d*numPerDia__) + 1, r, c);
+					for (int r = 0; r < inst->numSal__; r++)
+						fprintf(f, "+ x_%d_%d_%d - x_%d_%d_%d ", (d*inst->numPerDia__), r, c, (d*inst->numPerDia__) + 1, r, c);
 				}
 			fprintf(f, "- z_%d_%d_%d <= 0\n", u, d, 0);
 		}
 	}
 	fprintf(f, "\n");
-	for (int u = 0; u < numTur__; u++)
+	for (int u = 0; u < inst->numTur__; u++)
 	{
-		for (int d = 0; d < numDia__; d++)
+		for (int d = 0; d < inst->numDia__; d++)
 		{
-			for (int c = 0; c < numDis__; c++)
+			for (int c = 0; c < inst->numDis__; c++)
 				if (matDisTur__[c][u] == 1)
 				{
-					for (int r = 0; r < numSal__; r++)
-						fprintf(f, "+ x_%d_%d_%d - x_%d_%d_%d ", (d*numPerDia__) + numPerDia__ - 1, r, c, (d*numPerDia__) + numPerDia__ - 2, r, c);
+					for (int r = 0; r < inst->numSal__; r++)
+						fprintf(f, "+ x_%d_%d_%d - x_%d_%d_%d ", (d*inst->numPerDia__) + inst->numPerDia__ - 1, r, c, (d*inst->numPerDia__) + inst->numPerDia__ - 2, r, c);
 				}
 			fprintf(f, "- z_%d_%d_%d <= 0\n", u, d, 1);
 		}
 	}
 	fprintf(f, "\n");
-	for (int s = 2; s < numPerDia__; s++)
+	for (int s = 2; s < inst->numPerDia__; s++)
 	{
-		for (int u = 0; u < numTur__; u++)
+		for (int u = 0; u < inst->numTur__; u++)
 		{
-			for (int d = 0; d < numDia__; d++)
+			for (int d = 0; d < inst->numDia__; d++)
 			{
-				for (int c = 0; c < numDis__; c++)
+				for (int c = 0; c < inst->numDis__; c++)
 					if (matDisTur__[c][u] == 1)
 					{
-						for (int r = 0; r < numSal__; r++)
-							fprintf(f, "+ x_%d_%d_%d - x_%d_%d_%d - x_%d_%d_%d ", (d*numPerDia__) + s - 1, r, c, (d*numPerDia__) + s - 2, r, c, (d*numPerDia__) + s, r, c);
+						for (int r = 0; r < inst->numSal__; r++)
+							fprintf(f, "+ x_%d_%d_%d - x_%d_%d_%d - x_%d_%d_%d ", (d*inst->numPerDia__) + s - 1, r, c, (d*inst->numPerDia__) + s - 2, r, c, (d*inst->numPerDia__) + s, r, c);
 					}
 				fprintf(f, "- z_%d_%d_%d <= 0\n", u, d, s);
 			}
@@ -679,19 +663,19 @@ void montarModeloPLI(char *arq)
 		fprintf(f, "\n");
 	}
 	fprintf(f, "\n\\R14 - Salas utilizadas por disciplina\n");
-	for (int p = 0; p < numPerTot__; p++)
+	for (int p = 0; p < inst->numPerTot__; p++)
 	{
-		for (int r = 0; r < numSal__; r++)
-			for (int c = 0; c < numDis__; c++)
+		for (int r = 0; r < inst->numSal__; r++)
+			for (int c = 0; c < inst->numDis__; c++)
 				fprintf(f, "x_%d_%d_%d - y_%d_%d <= 0\n", p, r, c, r, c);
 		fprintf(f, "\n");
 	}
 	fprintf(f, "\n\\R15 - Salas utilizadas por disciplina\n");
-	for (int r = 0; r < numSal__; r++)
+	for (int r = 0; r < inst->numSal__; r++)
 	{
-		for (int c = 0; c < numDis__; c++)
+		for (int c = 0; c < inst->numDis__; c++)
 		{
-			for (int p = 0; p < numPerTot__; p++)
+			for (int p = 0; p < inst->numPerTot__; p++)
 				fprintf(f, "+ x_%d_%d_%d ", p, r, c);
 			fprintf(f, "- y_%d_%d >= 0\n", r, c);
 		}
@@ -700,52 +684,52 @@ void montarModeloPLI(char *arq)
 #endif
 	fprintf(f, "\nBOUNDS\n");
 	fprintf(f, "\n\\Variáveis x\n");
-	for (int r = 0; r < numSal__; r++)
-		for (int p = 0; p < numPerTot__; p++)
-			for (int c = 0; c < numDis__; c++)
+	for (int r = 0; r < inst->numSal__; r++)
+		for (int p = 0; p < inst->numPerTot__; p++)
+			for (int c = 0; c < inst->numDis__; c++)
 				fprintf(f, "0 <= x_%d_%d_%d <= 1\n", p, r, c);
 #ifdef RES_SOFT
 	fprintf(f, "\n\\Variáveis v\n");
-	for (int d = 0; d < numDia__; d++)
-		for (int c = 0; c < numDis__; c++)
+	for (int d = 0; d < inst->numDia__; d++)
+		for (int c = 0; c < inst->numDis__; c++)
 			fprintf(f, "0 <= v_%d_%d <= 1\n", d, c);
 	fprintf(f, "\n\\Variáveis q\n");
-	for (int c = 0; c < numDis__; c++)
-		fprintf(f, "0 <= q_%d <= %d\n", c, numDia__);
+	for (int c = 0; c < inst->numDis__; c++)
+		fprintf(f, "0 <= q_%d <= %d\n", c, inst->numDia__);
 	fprintf(f, "\n\\Variáveis z\n");
-	for (int u = 0; u < numTur__; u++)
-		for (int d = 0; d < numDia__; d++)
-			for (int s = 0; s < numPerDia__; s++)
+	for (int u = 0; u < inst->numTur__; u++)
+		for (int d = 0; d < inst->numDia__; d++)
+			for (int s = 0; s < inst->numPerDia__; s++)
 				fprintf(f, "0 <= z_%d_%d_%d <= 1\n", u, d, s);
 	fprintf(f, "\n\\Variáveis y\n");
-	for (int r = 0; r < numSal__; r++)
-		for (int c = 0; c < numDis__; c++)
+	for (int r = 0; r < inst->numSal__; r++)
+		for (int c = 0; c < inst->numDis__; c++)
 			fprintf(f, "0 <= y_%d_%d <= 1\n", r, c);
 #endif
 #ifdef RES_SOFT
 	fprintf(f, "\nGENERALS\n"); // Para variáveis inteiras
 	fprintf(f, "\n\\Variáveis q\n");
-	for (int c = 0; c < numDis__; c++)
+	for (int c = 0; c < inst->numDis__; c++)
 		fprintf(f, "q_%d\n", c);
 #endif
 	fprintf(f, "\nBINARIES\n");
-	for (int r = 0; r < numSal__; r++)
-		for (int p = 0; p < numPerTot__; p++)
-			for (int c = 0; c < numDis__; c++)
+	for (int r = 0; r < inst->numSal__; r++)
+		for (int p = 0; p < inst->numPerTot__; p++)
+			for (int c = 0; c < inst->numDis__; c++)
 				fprintf(f, "x_%d_%d_%d\n", p, r, c);
 #ifdef RES_SOFT
 	fprintf(f, "\n\\Variáveis v\n");
-	for (int d = 0; d < numDia__; d++)
-		for (int c = 0; c < numDis__; c++)
+	for (int d = 0; d < inst->numDia__; d++)
+		for (int c = 0; c < inst->numDis__; c++)
 			fprintf(f, "v_%d_%d\n", d, c);
 	fprintf(f, "\n\\Variáveis z\n");
-	for (int u = 0; u < numTur__; u++)
-		for (int d = 0; d < numDia__; d++)
-			for (int s = 0; s < numPerDia__; s++)
+	for (int u = 0; u < inst->numTur__; u++)
+		for (int d = 0; d < inst->numDia__; d++)
+			for (int s = 0; s < inst->numPerDia__; s++)
 				fprintf(f, "z_%d_%d_%d\n", u, d, s);
 	fprintf(f, "\n\\Variáveis y\n");
-	for (int r = 0; r < numSal__; r++)
-		for (int c = 0; c < numDis__; c++)
+	for (int r = 0; r < inst->numSal__; r++)
+		for (int c = 0; c < inst->numDis__; c++)
 			fprintf(f, "y_%d_%d\n", r, c);
 #endif
 	fprintf(f, "\nEND");
@@ -754,123 +738,79 @@ void montarModeloPLI(char *arq)
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-void lerInstancia(char *arq)
+Instancia* lerInstancia(char *arq)
 {
+	Instancia* inst = (Instancia*) malloc(sizeof(Instancia));
 	int pos;
 	char aux[50];
 	FILE *f = fopen(arq, "r");
-	fscanf(f, "Name: %s\n", &nomInst__);
-	fscanf(f, "Courses: %d\n", &numDis__);
-	fscanf(f, "Rooms: %d\n", &numSal__);
-	fscanf(f, "Days: %d\n", &numDia__);
-	fscanf(f, "Periods_per_day: %d\n", &numPerDia__);
-	fscanf(f, "Curricula: %d\n", &numTur__);
-	fscanf(f, "Constraints: %d\n", &numRes__);
+	fscanf(f, "Name: %s\n", &inst->nomInst__);
+	fscanf(f, "Courses: %d\n", &inst->numDis__);
+	fscanf(f, "Rooms: %d\n", &inst->numSal__);
+	fscanf(f, "Days: %d\n", &inst->numDia__);
+	fscanf(f, "Periods_per_day: %d\n", &inst->numPerDia__);
+	fscanf(f, "Curricula: %d\n", &inst->numTur__);
+	fscanf(f, "Constraints: %d\n", &inst->numRes__);
 	fscanf(f, "\nCOURSES:\n");
-	numPerTot__ = numDia__ * numPerDia__;
-	numPro__ = 0;
-	for (int i = 0; i < numDis__; i++)
+	inst->numPerTot__ = inst->numDia__ * inst->numPerDia__;
+	inst->numPro__ = 0;
+	for (int i = 0; i < inst->numDis__; i++)
 	{
-		fscanf(f, "%s %s %d %d %d\n", &vetDisciplinas__[i].nome_, &aux,
-			&vetDisciplinas__[i].numPer_, &vetDisciplinas__[i].diaMin_, &vetDisciplinas__[i].numAlu_);
+		fscanf(f, "%s %s %d %d %d\n", &inst->vetDisciplinas__[i].nome_, &aux,
+			&inst->vetDisciplinas__[i].numPer_, &inst->vetDisciplinas__[i].diaMin_, &inst->vetDisciplinas__[i].numAlu_);
 		pos = -1;
-		for (int p = 0; p < numPro__; p++)
-			if (strcmp(aux, vetProfessores__[p].nome_) == 0)
+		for (int p = 0; p < inst->numPro__; p++)
+			if (strcmp(aux, inst->vetProfessores__[p].nome_) == 0)
 			{
-				vetDisciplinas__[i].professor_ = p;
+				inst->vetDisciplinas__[i].professor_ = p;
 				pos = p;
 				break;
 			}
 		if (pos == -1)
 		{
-			vetDisciplinas__[i].professor_ = numPro__;
-			strcpy_s(vetProfessores__[numPro__].nome_, aux);
-			numPro__++;
+			inst->vetDisciplinas__[i].professor_ = inst->numPro__;
+			strcpy_s(inst->vetProfessores__[inst->numPro__].nome_, aux);
+			inst->numPro__++;
 		}
 	}
-	for (int i = 0; i < numDis__; i++)
-		for (int j = 0; j < numTur__; j++)
+	for (int i = 0; i < inst->numDis__; i++)
+		for (int j = 0; j < inst->numTur__; j++)
 			matDisTur__[i][j] = 0;
 	fscanf(f, "\nROOMS:\n");
-	for (int i = 0; i < numSal__; i++)
-		fscanf(f, "%s %d\n", &vetSalas__[i].nome_, &vetSalas__[i].capacidade_);
+	for (int i = 0; i < inst->numSal__; i++)
+		fscanf(f, "%s %d\n", &inst->vetSalas__[i].nome_, &inst->vetSalas__[i].capacidade_);
 	fscanf(f, "\nCURRICULA:\n");
-	for (int i = 0; i < numTur__; i++)
+	for (int i = 0; i < inst->numTur__; i++)
 	{
-		fscanf(f, "%s %d", &vetTurmas__[i].nome_, &vetTurmas__[i].numDis_);
-		for (int j = 0; j < vetTurmas__[i].numDis_; j++)
+		fscanf(f, "%s %d", &inst->vetTurmas__[i].nome_, &inst->vetTurmas__[i].numDis_);
+		for (int j = 0; j < inst->vetTurmas__[i].numDis_; j++)
 		{
 			fscanf(f, "%s ", &aux);
-			vetTurmas__[i].vetDis_[j] = -1;
-			for (int k = 0; k < numDis__; k++)
-				if (strcmp(aux, vetDisciplinas__[k].nome_) == 0)
+			inst->vetTurmas__[i].vetDis_[j] = -1;
+			for (int k = 0; k < inst->numDis__; k++)
+				if (strcmp(aux, inst->vetDisciplinas__[k].nome_) == 0)
 				{
-					vetTurmas__[i].vetDis_[j] = k;
+					inst->vetTurmas__[i].vetDis_[j] = k;
 					matDisTur__[k][i] = 1;
 					break;
 				}
 		}
 	}
 	fscanf(f, "\nUNAVAILABILITY_CONSTRAINTS:\n");
-	for (int i = 0; i < numRes__; i++)
+	for (int i = 0; i < inst->numRes__; i++)
 	{
-		fscanf(f, "%s %d %d\n", &aux, &pos, &vetRestricoes__[i].periodo_);
-		vetRestricoes__[i].periodo_ = (pos * numPerDia__) + vetRestricoes__[i].periodo_;
-		vetRestricoes__[i].disciplina_ = -1;
-		for (int j = 0; j < numDis__; j++)
-			if (strcmp(aux, vetDisciplinas__[j].nome_) == 0)
+		fscanf(f, "%s %d %d\n", &aux, &pos, &inst->vetRestricoes__[i].periodo_);
+		inst->vetRestricoes__[i].periodo_ = (pos * inst->numPerDia__) + inst->vetRestricoes__[i].periodo_;
+		inst->vetRestricoes__[i].disciplina_ = -1;
+		for (int j = 0; j < inst->numDis__; j++)
+			if (strcmp(aux, inst->vetDisciplinas__[j].nome_) == 0)
 			{
-				vetRestricoes__[i].disciplina_ = j;
+				inst->vetRestricoes__[i].disciplina_ = j;
 				break;
 			}
 	}
 	fclose(f);
-}
-//------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
-void testarEntrada()
-{
-	printf("Name: %s\n", nomInst__);
-	printf("Courses: %d\n", numDis__);
-	printf("Rooms: %d\n", numSal__);
-	printf("Days: %d\n", numDia__);
-	printf("Periods_per_day: %d\n", numPerDia__);
-	printf("Curricula: %d\n", numTur__);
-	printf("Constraints: %d\n", numRes__);
-
-	printf("\nDISCIPLINAS:\n");
-	for (int i = 0; i < numDis__; i++)
-		printf("%d  %s  %d  %d  %d  %d\n", i, vetDisciplinas__[i].nome_, vetDisciplinas__[i].professor_, vetDisciplinas__[i].numPer_, vetDisciplinas__[i].diaMin_, vetDisciplinas__[i].numAlu_);
-
-	printf("\nTURMAS:\n");
-	for (int i = 0; i < numTur__; i++)
-	{
-		printf("%d  %s  %d --> ", i, vetTurmas__[i].nome_, vetTurmas__[i].numDis_);
-		for (int j = 0; j < vetTurmas__[i].numDis_; j++)
-			printf("%d  ", vetTurmas__[i].vetDis_[j]);
-		printf("\n");
-	}
-
-	printf("\nPROFESSORES:\n");
-	for (int i = 0; i < numPro__; i++)
-		printf("%d  %s\n", i, vetProfessores__[i].nome_);
-
-	printf("\nSALAS:\n");
-	for (int i = 0; i < numSal__; i++)
-		printf("%d  %s  %d\n", i, vetSalas__[i].nome_, vetSalas__[i].capacidade_);
-
-	printf("\nRESTRICOES:\n");
-	for (int i = 0; i < numRes__; i++)
-		printf("%d  %d  %d\n", i, vetRestricoes__[i].disciplina_, vetRestricoes__[i].periodo_);
-
-	printf("\nDISC x TURMA:\n");
-	for (int i = 0; i < numDis__; i++)
-	{
-		for (int j = 0; j < numTur__; j++)
-			printf("%d  ", matDisTur__[i][j]);
-		printf("\n");
-	}
+	return inst;
 }
 //------------------------------------------------------------------------------
 
@@ -896,9 +836,9 @@ void initRestJanHor(RestJanHor *rest) {
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-void initVetJanHor() {
+void initVetJanHor(Instancia* inst) {
 
-	int numRest = numTur__*numDia__*numPerDia__;
+	int numRest = inst->numTur__*inst->numDia__*inst->numPerDia__;
 	vetRestJanHor__ = (RestJanHor*)malloc(numRest * sizeof(RestJanHor));
 
 	for (int i = 0; i < numRest; i++) {
@@ -908,13 +848,13 @@ void initVetJanHor() {
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-void montaMatCoefXFO() {
+void montaMatCoefXFO(Instancia* inst) {
 
 	for (int p = 0; p < MAX_PER * MAX_DIA; p++) {
 		for (int r = 0; r < MAX_SAL; r++) {
 			for (int c = 0; c < MAX_DIS; c++) {
-				if (vetDisciplinas__[c].numAlu_ > vetSalas__[r].capacidade_)
-					coefMatXFO[p][r][c] = (vetDisciplinas__[c].numAlu_ - vetSalas__[r].capacidade_);
+				if (inst->vetDisciplinas__[c].numAlu_ > inst->vetSalas__[r].capacidade_)
+					coefMatXFO[p][r][c] = (inst->vetDisciplinas__[c].numAlu_ - inst->vetSalas__[r].capacidade_);
 				else
 					coefMatXFO[p][r][c] = 0;
 			}
@@ -924,35 +864,32 @@ void montaMatCoefXFO() {
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-void initMultiplicadores() {
+void initMultiplicadores(double* vetMult, int tam, double val) {
 
-	int numRest = numTur__*numDia__*numPerDia__;
-	vetAlpha = (double*) malloc(numRest * sizeof(double));
-	
-	for (int i = 0; i < numRest; i++) {
-		vetAlpha[i] = VAL_INIT_ALPHA;
+	for (int i = 0; i < tam; i++) {
+		vetMult[i] = val;
 	}
 }
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-void montaCoefRestJanHor() {
+void montaCoefRestJanHor(Instancia* inst) {
 
-	int numRest = numTur__*numDia__*numPerDia__;
+	int numRest = inst->numTur__*inst->numDia__*inst->numPerDia__;
 
 	
 	// Primeiro período do dia
 	RestJanHor *rest = &vetRestJanHor__[0];
-	for (int u = 0; u < numTur__; u++)
+	for (int u = 0; u < inst->numTur__; u++)
 	{
-		for (int d = 0; d < numDia__; d++)
+		for (int d = 0; d < inst->numDia__; d++)
 		{
-			for (int c = 0; c < numDis__; c++)
+			for (int c = 0; c < inst->numDis__; c++)
 				if (matDisTur__[c][u] == 1)
 				{
-					for (int r = 0; r < numSal__; r++) {
-						rest->coefMatX[d*numPerDia__][r][c] = 1;
-						rest->coefMatX[(d*numPerDia__) + 1][r][c] = -1;
+					for (int r = 0; r < inst->numSal__; r++) {
+						rest->coefMatX[d*inst->numPerDia__][r][c] = 1;
+						rest->coefMatX[(d*inst->numPerDia__) + 1][r][c] = -1;
 					}
 				}
 			rest->coefMatZ[u][d][0] = -1;
@@ -961,16 +898,16 @@ void montaCoefRestJanHor() {
 
 	// Último período do dia
 	rest = &vetRestJanHor__[1];
-	for (int u = 0; u < numTur__; u++)
+	for (int u = 0; u < inst->numTur__; u++)
 	{
-		for (int d = 0; d < numDia__; d++)
+		for (int d = 0; d < inst->numDia__; d++)
 		{
-			for (int c = 0; c < numDis__; c++)
+			for (int c = 0; c < inst->numDis__; c++)
 				if (matDisTur__[c][u] == 1)
 				{
-					for (int r = 0; r < numSal__; r++) {
-						rest->coefMatX[(d*numPerDia__) + numPerDia__ - 1][r][c] = 1;
-						rest->coefMatX[(d*numPerDia__) + numPerDia__ - 2][r][c] = -1;
+					for (int r = 0; r < inst->numSal__; r++) {
+						rest->coefMatX[(d*inst->numPerDia__) + inst->numPerDia__ - 1][r][c] = 1;
+						rest->coefMatX[(d*inst->numPerDia__) + inst->numPerDia__ - 2][r][c] = -1;
 					}
 				}
 			rest->coefMatZ[u][d][1] = -1;
@@ -978,20 +915,20 @@ void montaCoefRestJanHor() {
 	}
 
 	// Períodos intermediários do dia
-	for (int s = 2; s < numPerDia__; s++)
+	for (int s = 2; s < inst->numPerDia__; s++)
 	{
 		rest = &vetRestJanHor__[s];
-		for (int u = 0; u < numTur__; u++)
+		for (int u = 0; u < inst->numTur__; u++)
 		{
-			for (int d = 0; d < numDia__; d++)
+			for (int d = 0; d < inst->numDia__; d++)
 			{
-				for (int c = 0; c < numDis__; c++)
+				for (int c = 0; c < inst->numDis__; c++)
 					if (matDisTur__[c][u] == 1)
 					{
-						for (int r = 0; r < numSal__; r++) {
-							rest->coefMatX[(d*numPerDia__) + s - 1][r][c] = 1;
-							rest->coefMatX[(d*numPerDia__) + s - 2][r][c] = -1;
-							rest->coefMatX[(d*numPerDia__) + s][r][c] = -1;
+						for (int r = 0; r < inst->numSal__; r++) {
+							rest->coefMatX[(d*inst->numPerDia__) + s - 1][r][c] = 1;
+							rest->coefMatX[(d*inst->numPerDia__) + s - 2][r][c] = -1;
+							rest->coefMatX[(d*inst->numPerDia__) + s][r][c] = -1;
 						}
 					}
 				rest->coefMatZ[u][d][s] = -1;
@@ -1002,19 +939,19 @@ void montaCoefRestJanHor() {
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-void montarModeloRelaxado(char *arq) {
+void montarModeloRelaxado(char *arq, Instancia* inst, double* vetAlpha) {
 
 	FILE *f = fopen(arq, "w");
 
-	int numRest = numTur__*numDia__*numPerDia__;
+	int numRest = inst->numTur__*inst->numDia__*inst->numPerDia__;
 	// ------------------ FO
 	fprintf(f, "MIN\n");
 
-	for (int r = 0; r < numSal__; r++)
+	for (int r = 0; r < inst->numSal__; r++)
 	{
-		for (int p = 0; p < numPerTot__; p++)
+		for (int p = 0; p < inst->numPerTot__; p++)
 		{
-			for (int c = 0; c < numDis__; c++) {
+			for (int c = 0; c < inst->numDis__; c++) {
 				
 				double aux = 0;
 				for (int i = 0; i < numRest; i++) {
@@ -1032,11 +969,11 @@ void montarModeloRelaxado(char *arq) {
 	}
 
 	fprintf(f, "\n\n\\Janelas de horários\n");
-	for (int u = 0; u < numTur__; u++)
+	for (int u = 0; u < inst->numTur__; u++)
 	{
-		for (int d = 0; d < numDia__; d++)
+		for (int d = 0; d < inst->numDia__; d++)
 		{
-			for (int s = 0; s < numPerDia__; s++) {
+			for (int s = 0; s < inst->numPerDia__; s++) {
 				double aux = 0;
 				for (int i = 0; i < numRest; i++) {
 					aux -= vetRestJanHor__[i].coefMatZ[u][d][s] * vetAlpha[i];
@@ -1053,18 +990,18 @@ void montarModeloRelaxado(char *arq) {
 	}
 
 	fprintf(f, "\n\\Dias mínimos\n");
-	for (int c = 0; c < numDis__; c++)
+	for (int c = 0; c < inst->numDis__; c++)
 		fprintf(f, "+ %d q_%d ", PESOS[2], c);
 
 	fprintf(f, "\n\n\\Salas diferentes\n");
-	for (int c = 0; c < numDis__; c++)
+	for (int c = 0; c < inst->numDis__; c++)
 	{
-		for (int r = 0; r < numSal__; r++)
+		for (int r = 0; r < inst->numSal__; r++)
 			fprintf(f, "+ %d y_%d_%d ", PESOS[3], r, c);
 		fprintf(f, "\n");
 	}
 
-	int val = PESOS[3] * numDis__;
+	int val = PESOS[3] * inst->numDis__;
 	fprintf(f, "- val\n");
 	fprintf(f, "\nST\n");
 	fprintf(f, "\n\\Valor constante\n");
@@ -1072,48 +1009,48 @@ void montarModeloRelaxado(char *arq) {
 
 	fprintf(f, "\n\\ ------------------------------------ HARD------------------------------------\n");
 	fprintf(f, "\n\\R1 - Número de aulas\n");
-	for (int c = 0; c < numDis__; c++)
+	for (int c = 0; c < inst->numDis__; c++)
 	{
-		for (int p = 0; p < numPerTot__; p++)
-			for (int r = 0; r < numSal__; r++)
+		for (int p = 0; p < inst->numPerTot__; p++)
+			for (int r = 0; r < inst->numSal__; r++)
 				fprintf(f, "+ x_%d_%d_%d ", p, r, c);
-		fprintf(f, "= %d\n", vetDisciplinas__[c].numPer_);
+		fprintf(f, "= %d\n", inst->vetDisciplinas__[c].numPer_);
 	}
 	fprintf(f, "\n\\R2 - Aulas na mesma sala no mesmo período\n");
-	for (int p = 0; p < numPerTot__; p++)
-		for (int r = 0; r < numSal__; r++)
+	for (int p = 0; p < inst->numPerTot__; p++)
+		for (int r = 0; r < inst->numSal__; r++)
 		{
-			for (int c = 0; c < numDis__; c++)
+			for (int c = 0; c < inst->numDis__; c++)
 				fprintf(f, "+ x_%d_%d_%d ", p, r, c);
 			fprintf(f, "<= 1\n");
 		}
 	fprintf(f, "\n\\R3 - Aulas de uma disciplina no mesmo período\n");
-	for (int p = 0; p < numPerTot__; p++)
-		for (int c = 0; c < numDis__; c++)
+	for (int p = 0; p < inst->numPerTot__; p++)
+		for (int c = 0; c < inst->numDis__; c++)
 		{
-			for (int r = 0; r < numSal__; r++)
+			for (int r = 0; r < inst->numSal__; r++)
 				fprintf(f, "+ x_%d_%d_%d ", p, r, c);
 			fprintf(f, "<= 1\n");
 		}
 	fprintf(f, "\n\\R4 - Aulas de um professor no mesmo período\n");
-	for (int p = 0; p < numPerTot__; p++)
-		for (int t = 0; t < numPro__; t++)
+	for (int p = 0; p < inst->numPerTot__; p++)
+		for (int t = 0; t < inst->numPro__; t++)
 		{
-			for (int r = 0; r < numSal__; r++)
-				for (int c = 0; c < numDis__; c++)
-					if (vetDisciplinas__[c].professor_ == t)
+			for (int r = 0; r < inst->numSal__; r++)
+				for (int c = 0; c < inst->numDis__; c++)
+					if (inst->vetDisciplinas__[c].professor_ == t)
 						fprintf(f, "+ x_%d_%d_%d ", p, r, c);
 			fprintf(f, "<= 1\n");
 		}
 	fprintf(f, "\n\\R5 - Aulas de uma turma no mesmo período\n");
-	for (int p = 0; p < numPerTot__; p++)
-		for (int u = 0; u < numTur__; u++)
+	for (int p = 0; p < inst->numPerTot__; p++)
+		for (int u = 0; u < inst->numTur__; u++)
 		{
-			for (int r = 0; r < numSal__; r++)
-				for (int c = 0; c < numDis__; c++)
+			for (int r = 0; r < inst->numSal__; r++)
+				for (int c = 0; c < inst->numDis__; c++)
 				{
-					for (int k = 0; k < vetTurmas__[u].numDis_; k++)
-						if (vetTurmas__[u].vetDis_[k] == c)
+					for (int k = 0; k < inst->vetTurmas__[u].numDis_; k++)
+						if (inst->vetTurmas__[u].vetDis_[k] == c)
 						{
 							fprintf(f, "+ x_%d_%d_%d ", p, r, c);
 							break;
@@ -1122,87 +1059,87 @@ void montarModeloRelaxado(char *arq) {
 			fprintf(f, "<= 1\n");
 		}
 	fprintf(f, "\n\\R6 - Restrições de oferta (alocação)\n");
-	for (int s = 0; s < numRes__; s++)
+	for (int s = 0; s < inst->numRes__; s++)
 	{
-		for (int r = 0; r < numSal__; r++)
-			fprintf(f, "+ x_%d_%d_%d ", vetRestricoes__[s].periodo_, r, vetRestricoes__[s].disciplina_);
+		for (int r = 0; r < inst->numSal__; r++)
+			fprintf(f, "+ x_%d_%d_%d ", inst->vetRestricoes__[s].periodo_, r, inst->vetRestricoes__[s].disciplina_);
 		fprintf(f, "= 0\n");
 	}
 #ifdef RES_SOFT
 	fprintf(f, "\n\\ ------------------------------------ SOFT------------------------------------\n");
 	fprintf(f, "\n\\R7 - Número de salas usadas por disciplina\n");
-	for (int c = 0; c < numDis__; c++)
+	for (int c = 0; c < inst->numDis__; c++)
 	{
-		for (int d = 0; d < numDia__; d++)
-			for (int p = (d*numPerDia__); p < (d*numPerDia__) + numPerDia__; p++)
+		for (int d = 0; d < inst->numDia__; d++)
+			for (int p = (d*inst->numPerDia__); p < (d*inst->numPerDia__) + inst->numPerDia__; p++)
 			{
-				for (int r = 0; r < numSal__; r++)
+				for (int r = 0; r < inst->numSal__; r++)
 					fprintf(f, "+ x_%d_%d_%d ", p, r, c);
 				fprintf(f, "- v_%d_%d <= 0\n", d, c);
 			}
 		fprintf(f, "\n");
 	}
 	fprintf(f, "\n\\R8 - Número de salas usadas por disciplina\n");
-	for (int c = 0; c < numDis__; c++)
+	for (int c = 0; c < inst->numDis__; c++)
 	{
-		for (int d = 0; d < numDia__; d++)
+		for (int d = 0; d < inst->numDia__; d++)
 		{
-			for (int r = 0; r < numSal__; r++)
-				for (int p = (d*numPerDia__); p < (d*numPerDia__) + numPerDia__; p++)
+			for (int r = 0; r < inst->numSal__; r++)
+				for (int p = (d*inst->numPerDia__); p < (d*inst->numPerDia__) + inst->numPerDia__; p++)
 					fprintf(f, "+ x_%d_%d_%d ", p, r, c);
 			fprintf(f, "- v_%d_%d >= 0\n", d, c);
 		}
 		fprintf(f, "\n");
 	}
 	fprintf(f, "\n\\R9 - Dias mínimos\n");
-	for (int c = 0; c < numDis__; c++)
+	for (int c = 0; c < inst->numDis__; c++)
 	{
-		for (int d = 0; d < numDia__; d++)
+		for (int d = 0; d < inst->numDia__; d++)
 			fprintf(f, "+ v_%d_%d ", d, c);
-		fprintf(f, "+ q_%d >= %d\n", c, vetDisciplinas__[c].diaMin_);
+		fprintf(f, "+ q_%d >= %d\n", c, inst->vetDisciplinas__[c].diaMin_);
 	}
 
 #ifndef REL_JAN_HOR
 	fprintf(f, "\n\\R10 a R13+#PER_DIA - Janelas no horário das turmas\n");
-	for (int u = 0; u < numTur__; u++)
+	for (int u = 0; u < inst->numTur__; u++)
 	{
-		for (int d = 0; d < numDia__; d++)
+		for (int d = 0; d < inst->numDia__; d++)
 		{
-			for (int c = 0; c < numDis__; c++)
+			for (int c = 0; c < inst->numDis__; c++)
 				if (matDisTur__[c][u] == 1)
 				{
-					for (int r = 0; r < numSal__; r++)
-						fprintf(f, "+ x_%d_%d_%d - x_%d_%d_%d ", (d*numPerDia__), r, c, (d*numPerDia__) + 1, r, c);
+					for (int r = 0; r < inst->numSal__; r++)
+						fprintf(f, "+ x_%d_%d_%d - x_%d_%d_%d ", (d*inst->numPerDia__), r, c, (d*inst->numPerDia__) + 1, r, c);
 				}
 			fprintf(f, "- z_%d_%d_%d <= 0\n", u, d, 0);
 		}
 	}
 	fprintf(f, "\n");
-	for (int u = 0; u < numTur__; u++)
+	for (int u = 0; u < inst->numTur__; u++)
 	{
-		for (int d = 0; d < numDia__; d++)
+		for (int d = 0; d < inst->numDia__; d++)
 		{
-			for (int c = 0; c < numDis__; c++)
+			for (int c = 0; c < inst->numDis__; c++)
 				if (matDisTur__[c][u] == 1)
 				{
-					for (int r = 0; r < numSal__; r++)
-						fprintf(f, "+ x_%d_%d_%d - x_%d_%d_%d ", (d*numPerDia__) + numPerDia__ - 1, r, c, (d*numPerDia__) + numPerDia__ - 2, r, c);
+					for (int r = 0; r < inst->numSal__; r++)
+						fprintf(f, "+ x_%d_%d_%d - x_%d_%d_%d ", (d*inst->numPerDia__) + inst->numPerDia__ - 1, r, c, (d*inst->numPerDia__) + inst->numPerDia__ - 2, r, c);
 				}
 			fprintf(f, "- z_%d_%d_%d <= 0\n", u, d, 1);
 		}
 	}
 	fprintf(f, "\n");
-	for (int s = 2; s < numPerDia__; s++)
+	for (int s = 2; s < inst->numPerDia__; s++)
 	{
-		for (int u = 0; u < numTur__; u++)
+		for (int u = 0; u < inst->numTur__; u++)
 		{
-			for (int d = 0; d < numDia__; d++)
+			for (int d = 0; d < inst->numDia__; d++)
 			{
-				for (int c = 0; c < numDis__; c++)
+				for (int c = 0; c < inst->numDis__; c++)
 					if (matDisTur__[c][u] == 1)
 					{
-						for (int r = 0; r < numSal__; r++)
-							fprintf(f, "+ x_%d_%d_%d - x_%d_%d_%d - x_%d_%d_%d ", (d*numPerDia__) + s - 1, r, c, (d*numPerDia__) + s - 2, r, c, (d*numPerDia__) + s, r, c);
+						for (int r = 0; r < inst->numSal__; r++)
+							fprintf(f, "+ x_%d_%d_%d - x_%d_%d_%d - x_%d_%d_%d ", (d*inst->numPerDia__) + s - 1, r, c, (d*inst->numPerDia__) + s - 2, r, c, (d*inst->numPerDia__) + s, r, c);
 					}
 				fprintf(f, "- z_%d_%d_%d <= 0\n", u, d, s);
 			}
@@ -1212,19 +1149,19 @@ void montarModeloRelaxado(char *arq) {
 #endif // !REL_JAN_HOR
 
 	fprintf(f, "\n\\R14 - Salas utilizadas por disciplina\n");
-	for (int p = 0; p < numPerTot__; p++)
+	for (int p = 0; p < inst->numPerTot__; p++)
 	{
-		for (int r = 0; r < numSal__; r++)
-			for (int c = 0; c < numDis__; c++)
+		for (int r = 0; r < inst->numSal__; r++)
+			for (int c = 0; c < inst->numDis__; c++)
 				fprintf(f, "x_%d_%d_%d - y_%d_%d <= 0\n", p, r, c, r, c);
 		fprintf(f, "\n");
 	}
 	fprintf(f, "\n\\R15 - Salas utilizadas por disciplina\n");
-	for (int r = 0; r < numSal__; r++)
+	for (int r = 0; r < inst->numSal__; r++)
 	{
-		for (int c = 0; c < numDis__; c++)
+		for (int c = 0; c < inst->numDis__; c++)
 		{
-			for (int p = 0; p < numPerTot__; p++)
+			for (int p = 0; p < inst->numPerTot__; p++)
 				fprintf(f, "+ x_%d_%d_%d ", p, r, c);
 			fprintf(f, "- y_%d_%d >= 0\n", r, c);
 		}
@@ -1233,52 +1170,52 @@ void montarModeloRelaxado(char *arq) {
 #endif
 	fprintf(f, "\nBOUNDS\n");
 	fprintf(f, "\n\\Variáveis x\n");
-	for (int r = 0; r < numSal__; r++)
-		for (int p = 0; p < numPerTot__; p++)
-			for (int c = 0; c < numDis__; c++)
+	for (int r = 0; r < inst->numSal__; r++)
+		for (int p = 0; p < inst->numPerTot__; p++)
+			for (int c = 0; c < inst->numDis__; c++)
 				fprintf(f, "0 <= x_%d_%d_%d <= 1\n", p, r, c);
 #ifdef RES_SOFT
 	fprintf(f, "\n\\Variáveis v\n");
-	for (int d = 0; d < numDia__; d++)
-		for (int c = 0; c < numDis__; c++)
+	for (int d = 0; d < inst->numDia__; d++)
+		for (int c = 0; c < inst->numDis__; c++)
 			fprintf(f, "0 <= v_%d_%d <= 1\n", d, c);
 	fprintf(f, "\n\\Variáveis q\n");
-	for (int c = 0; c < numDis__; c++)
-		fprintf(f, "0 <= q_%d <= %d\n", c, numDia__);
+	for (int c = 0; c < inst->numDis__; c++)
+		fprintf(f, "0 <= q_%d <= %d\n", c, inst->numDia__);
 	fprintf(f, "\n\\Variáveis z\n");
-	for (int u = 0; u < numTur__; u++)
-		for (int d = 0; d < numDia__; d++)
-			for (int s = 0; s < numPerDia__; s++)
+	for (int u = 0; u < inst->numTur__; u++)
+		for (int d = 0; d < inst->numDia__; d++)
+			for (int s = 0; s < inst->numPerDia__; s++)
 				fprintf(f, "0 <= z_%d_%d_%d <= 1\n", u, d, s);
 	fprintf(f, "\n\\Variáveis y\n");
-	for (int r = 0; r < numSal__; r++)
-		for (int c = 0; c < numDis__; c++)
+	for (int r = 0; r < inst->numSal__; r++)
+		for (int c = 0; c < inst->numDis__; c++)
 			fprintf(f, "0 <= y_%d_%d <= 1\n", r, c);
 #endif
 #ifdef RES_SOFT
 	fprintf(f, "\nGENERALS\n"); // Para variáveis inteiras
 	fprintf(f, "\n\\Variáveis q\n");
-	for (int c = 0; c < numDis__; c++)
+	for (int c = 0; c < inst->numDis__; c++)
 		fprintf(f, "q_%d\n", c);
 #endif
 	fprintf(f, "\nBINARIES\n");
-	for (int r = 0; r < numSal__; r++)
-		for (int p = 0; p < numPerTot__; p++)
-			for (int c = 0; c < numDis__; c++)
+	for (int r = 0; r < inst->numSal__; r++)
+		for (int p = 0; p < inst->numPerTot__; p++)
+			for (int c = 0; c < inst->numDis__; c++)
 				fprintf(f, "x_%d_%d_%d\n", p, r, c);
 #ifdef RES_SOFT
 	fprintf(f, "\n\\Variáveis v\n");
-	for (int d = 0; d < numDia__; d++)
-		for (int c = 0; c < numDis__; c++)
+	for (int d = 0; d < inst->numDia__; d++)
+		for (int c = 0; c < inst->numDis__; c++)
 			fprintf(f, "v_%d_%d\n", d, c);
 	fprintf(f, "\n\\Variáveis z\n");
-	for (int u = 0; u < numTur__; u++)
-		for (int d = 0; d < numDia__; d++)
-			for (int s = 0; s < numPerDia__; s++)
+	for (int u = 0; u < inst->numTur__; u++)
+		for (int d = 0; d < inst->numDia__; d++)
+			for (int s = 0; s < inst->numPerDia__; s++)
 				fprintf(f, "z_%d_%d_%d\n", u, d, s);
 	fprintf(f, "\n\\Variáveis y\n");
-	for (int r = 0; r < numSal__; r++)
-		for (int c = 0; c < numDis__; c++)
+	for (int r = 0; r < inst->numSal__; r++)
+		for (int c = 0; c < inst->numDis__; c++)
 			fprintf(f, "y_%d_%d\n", r, c);
 #endif
 	fprintf(f, "\nEND");
@@ -1287,74 +1224,79 @@ void montarModeloRelaxado(char *arq) {
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-double* getVetViabJanHor(Solucao &sol) {
+int getVetViabJanHor(Solucao &sol, double* vetViabJanHor, Instancia* inst) {
 
-	double* vetViabJanHor = (double*)malloc(numTur__*numDia__*numPerDia__ * sizeof(double));
+	int viavel = 1;
 
 	int pos = 0;
-	for (int u = 0; u < numTur__; u++)
+	for (int u = 0; u < inst->numTur__; u++)
 	{
-		for (int d = 0; d < numDia__; d++)
+		for (int d = 0; d < inst->numDia__; d++)
 		{
 			double soma = 0;
-			for (int c = 0; c < numDis__; c++)
+			for (int c = 0; c < inst->numDis__; c++)
 				if (matDisTur__[c][u] == 1)
 				{
-					for (int r = 0; r < numSal__; r++) {
-						int prim = d*numPerDia__;
-						int seg = (d*numPerDia__) + 1;
-						soma += sol.vetSol_[offset3D(r, prim , c, numPerTot__, numDis__)] - sol.vetSol_[offset3D(r, seg, c, numPerTot__, numDis__)];
+					for (int r = 0; r < inst->numSal__; r++) {
+						int prim = d*inst->numPerDia__;
+						int seg = (d*inst->numPerDia__) + 1;
+						soma += sol.vetSol_[offset3D(r, prim , c, inst->numPerTot__, inst->numDis__)] - sol.vetSol_[offset3D(r, seg, c, inst->numPerTot__, inst->numDis__)];
 					}
 				}
 			vetViabJanHor[pos] = soma <= sol.vetSolZ_[pos] ? 0 : soma - sol.vetSolZ_[pos];
+			if (vetViabJanHor[pos] != 0)
+				viavel = 0;
 			pos++;
 		}
 	}
 
-	for (int u = 0; u < numTur__; u++)
+	for (int u = 0; u < inst->numTur__; u++)
 	{
-		for (int d = 0; d < numDia__; d++)
+		for (int d = 0; d < inst->numDia__; d++)
 		{
 			double soma = 0;
-			for (int c = 0; c < numDis__; c++)
+			for (int c = 0; c < inst->numDis__; c++)
 				if (matDisTur__[c][u] == 1)
 				{
-					for (int r = 0; r < numSal__; r++) {
-						int prim = (d*numPerDia__) + numPerDia__ - 1;
-						int seg = (d*numPerDia__) + numPerDia__ - 2;
-						soma += sol.vetSol_[offset3D(r, prim, c, numPerTot__, numDis__)] - sol.vetSol_[offset3D(r, seg, c, numPerTot__, numDis__)];
+					for (int r = 0; r < inst->numSal__; r++) {
+						int prim = (d*inst->numPerDia__) + inst->numPerDia__ - 1;
+						int seg = (d*inst->numPerDia__) + inst->numPerDia__ - 2;
+						soma += sol.vetSol_[offset3D(r, prim, c, inst->numPerTot__, inst->numDis__)] - sol.vetSol_[offset3D(r, seg, c, inst->numPerTot__, inst->numDis__)];
 					}
 				}
 			vetViabJanHor[pos] = soma <= sol.vetSolZ_[pos] ? 0 : soma - sol.vetSolZ_[pos];
+			if (vetViabJanHor[pos] != 0)
+				viavel = 0;
 			pos++;
 		}
 	}
 
-	for (int s = 2; s < numPerDia__; s++)
+	for (int s = 2; s < inst->numPerDia__; s++)
 	{
-		for (int u = 0; u < numTur__; u++)
+		for (int u = 0; u < inst->numTur__; u++)
 		{
-			for (int d = 0; d < numDia__; d++)
+			for (int d = 0; d < inst->numDia__; d++)
 			{
 				double soma = 0;
-				for (int c = 0; c < numDis__; c++)
+				for (int c = 0; c < inst->numDis__; c++)
 					if (matDisTur__[c][u] == 1)
 					{
-						for (int r = 0; r < numSal__; r++) {
-							int prim = (d*numPerDia__) + s - 1;
-							int seg = (d*numPerDia__) + s - 2;
-							int ter = (d*numPerDia__) + s;
-							soma += sol.vetSol_[offset3D(r, prim, c, numPerTot__, numDis__)] - sol.vetSol_[offset3D(r, seg, c, numPerTot__, numDis__)]; -
-								sol.vetSol_[offset3D(r, ter, c, numPerTot__, numDis__)];
+						for (int r = 0; r < inst->numSal__; r++) {
+							int prim = (d*inst->numPerDia__) + s - 1;
+							int seg = (d*inst->numPerDia__) + s - 2;
+							int ter = (d*inst->numPerDia__) + s;
+							soma += sol.vetSol_[offset3D(r, prim, c, inst->numPerTot__, inst->numDis__)] - sol.vetSol_[offset3D(r, seg, c, inst->numPerTot__, inst->numDis__)] -
+								sol.vetSol_[offset3D(r, ter, c, inst->numPerTot__, inst->numDis__)];
 						}
 					}
 				vetViabJanHor[pos] = soma <= sol.vetSolZ_[pos] ? 0 : soma - sol.vetSolZ_[pos];
+				if (vetViabJanHor[pos] != 0)
+					viavel = 0;
 				pos++;
 			}
 		}
 	}
 
-	return vetViabJanHor;
+	return viavel;
 }
 //------------------------------------------------------------------------------
-
