@@ -6,6 +6,7 @@
 #include <conio.h>
 #include <time.h>
 #include "..\lib\cplex\include\cplex.h"
+#include "Colecoes.h"
 
 #define MAX(x,y) (((x) > (y)) ? (x) : (y))
 
@@ -15,7 +16,7 @@
 #define RES_DIA_MIN // Restrição soft de dias mínimos
 #define RES_SAL_DIF // Restrição soft de salas diferentes
 
-//#define RELAXAR
+#define RELAXAR
 
 //#define REL_CAP_SAL // Relaxar restrição soft de capacidade das salas
 #define	REL_JAN_HOR // Relaxar restrição soft de janelas de horários
@@ -172,7 +173,7 @@ void execTodas() {
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-void getValSol(Solucao &s, CPXENVptr env, CPXLPptr lp) {
+void getValSol(Solucao *sol, CPXENVptr env, CPXLPptr lp) {
 
 	int sts, iniX, fimX, iniZ, fimZ, iniQ, fimQ, iniY, fimY, iniV, fimV;
 
@@ -188,17 +189,16 @@ void getValSol(Solucao &s, CPXENVptr env, CPXLPptr lp) {
 	fimV = iniV + (numDia__*numDis__) - 1;
 
 	// Variáveis x
-	sts = CPXgetmipx(env, lp, s.vetSol_, iniX, fimX);
+	sts = CPXgetmipx(env, lp, sol->vetSol_, iniX, fimX);
 	// Variáveis z
-	sts = CPXgetmipx(env, lp, s.vetSolZ_, iniZ, fimZ);
+	sts = CPXgetmipx(env, lp, sol->vetSolZ_, iniZ, fimZ);
 	// Variáveis q
-	sts = CPXgetmipx(env, lp, s.vetSolQ_, iniQ, fimQ);
+	sts = CPXgetmipx(env, lp, sol->vetSolQ_, iniQ, fimQ);
 	// Variáveis y
-	sts = CPXgetmipx(env, lp, s.vetSolY_, iniY, fimY);
+	sts = CPXgetmipx(env, lp, sol->vetSolY_, iniY, fimY);
 	// Variáveis v
-	sts = CPXgetmipx(env, lp, s.vetSolV_, iniV, fimV);
+	sts = CPXgetmipx(env, lp, sol->vetSolV_, iniV, fimV);
 }
-
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
@@ -222,11 +222,16 @@ void execCpx(Solucao &s, char *arq)
 	sts = CPXgetbestobjval(env, lp, &s.bstNod_);
 
 	// Pegando os valores das variáveis
-	getValSol(s, env, lp);
+	getValSol(&s, env, lp);
 
-	s.vetViab_ = (double*) malloc(s.numRes_ * sizeof(double));
-	sts = CPXgetrowinfeas(env, lp, NULL, s.vetViab_, 0, s.numRes_ - 1);
-	printf("sts getrowinfeas: %d\n", sts);
+	int pos = 0;
+	printf("\n");
+	for (int c = 0; c < numDis__; c++) {
+		printf("q_%d = %.2f\n", c, s.vetSolQ_[c]);
+	}
+	printf("\n");
+
+	double* viabJanHor = getVetViabJanHor(s);
 	
 	int pfeas, dfeas;
 	sts = CPXsolninfo(env, lp, NULL, NULL, &pfeas, &dfeas);
@@ -379,7 +384,9 @@ void escreverSol(Solucao &s, char *arq)
 					if (vetDisciplinas__[s.matSolSal_[p][d][r]].numAlu_ > vetSalas__[r].capacidade_)
 						s.capSal_+= vetDisciplinas__[s.matSolSal_[p][d][r]].numAlu_ - vetSalas__[r].capacidade_;
 			}
+
 	s.janHor_ = 0;
+#ifndef RELAXAR
 	for (int u = 0; u < numTur__; u++)
 	{
 		for (int d = 0; d < numDia__; d++)
@@ -393,6 +400,8 @@ void escreverSol(Solucao &s, char *arq)
 					s.janHor_++;
 		}
 	}
+#endif // !RELAXAR
+
 	s.diaMin_ = 0;
 	for (int c = 0; c < numDis__; c++)
 	{
@@ -442,11 +451,6 @@ void escreverSol(Solucao &s, char *arq)
 		}
 		s.salDif_ += aux - 1;
 	}
-
-	if (ehViavel(&s))
-		fprintf(f, "SOLUÇÃO VIÁVEL\n");
-	else
-		fprintf(f, "SOLUÇÃO INVIÁVEL\n");
 
 	s.funObj_ = PESOS[0] * s.capSal_ + PESOS[1] * s.janHor_ + PESOS[2] * s.diaMin_ + PESOS[3] * s.salDif_;
 	fprintf(f, "\n\n>>> RESULTADOS CALCULADOS\n\n", s.valSol_);
@@ -1283,15 +1287,74 @@ void montarModeloRelaxado(char *arq) {
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-int ehViavel(Solucao* s) {
+double* getVetViabJanHor(Solucao &sol) {
 
-	for (int i = 0; i < s->numRes_; i++) {
-		if (s->vetViab_[i] != 0) {
-			printf("pos: %d\n", i);
-			printf("val: %f\n", s->vetViab_[i]);
-			return false;
+	double* vetViabJanHor = (double*)malloc(numTur__*numDia__*numPerDia__ * sizeof(double));
+
+	int pos = 0;
+	for (int u = 0; u < numTur__; u++)
+	{
+		for (int d = 0; d < numDia__; d++)
+		{
+			double soma = 0;
+			for (int c = 0; c < numDis__; c++)
+				if (matDisTur__[c][u] == 1)
+				{
+					for (int r = 0; r < numSal__; r++) {
+						int prim = d*numPerDia__;
+						int seg = (d*numPerDia__) + 1;
+						soma += sol.vetSol_[offset3D(r, prim , c, numPerTot__, numDis__)] - sol.vetSol_[offset3D(r, seg, c, numPerTot__, numDis__)];
+					}
+				}
+			vetViabJanHor[pos] = soma <= sol.vetSolZ_[pos] ? 0 : soma - sol.vetSolZ_[pos];
+			pos++;
 		}
 	}
-	return true;
+
+	for (int u = 0; u < numTur__; u++)
+	{
+		for (int d = 0; d < numDia__; d++)
+		{
+			double soma = 0;
+			for (int c = 0; c < numDis__; c++)
+				if (matDisTur__[c][u] == 1)
+				{
+					for (int r = 0; r < numSal__; r++) {
+						int prim = (d*numPerDia__) + numPerDia__ - 1;
+						int seg = (d*numPerDia__) + numPerDia__ - 2;
+						soma += sol.vetSol_[offset3D(r, prim, c, numPerTot__, numDis__)] - sol.vetSol_[offset3D(r, seg, c, numPerTot__, numDis__)];
+					}
+				}
+			vetViabJanHor[pos] = soma <= sol.vetSolZ_[pos] ? 0 : soma - sol.vetSolZ_[pos];
+			pos++;
+		}
+	}
+
+	for (int s = 2; s < numPerDia__; s++)
+	{
+		for (int u = 0; u < numTur__; u++)
+		{
+			for (int d = 0; d < numDia__; d++)
+			{
+				double soma = 0;
+				for (int c = 0; c < numDis__; c++)
+					if (matDisTur__[c][u] == 1)
+					{
+						for (int r = 0; r < numSal__; r++) {
+							int prim = (d*numPerDia__) + s - 1;
+							int seg = (d*numPerDia__) + s - 2;
+							int ter = (d*numPerDia__) + s;
+							soma += sol.vetSol_[offset3D(r, prim, c, numPerTot__, numDis__)] - sol.vetSol_[offset3D(r, seg, c, numPerTot__, numDis__)]; -
+								sol.vetSol_[offset3D(r, ter, c, numPerTot__, numDis__)];
+						}
+					}
+				vetViabJanHor[pos] = soma <= sol.vetSolZ_[pos] ? 0 : soma - sol.vetSolZ_[pos];
+				pos++;
+			}
+		}
+	}
+
+	return vetViabJanHor;
 }
 //------------------------------------------------------------------------------
+

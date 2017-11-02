@@ -1,6 +1,8 @@
 #ifndef uCBCTTH
 #define uCBCTTH
 
+#include "..\lib\cplex\include\cplex.h"
+
 #define PATH_INST "instances\\"
 #define NUM_INST 21 // número de instâncias
 
@@ -96,7 +98,7 @@ typedef struct tSolucao
 
  // vetor de solução (variáveis x)
  double vetSol_[MAX_PER*MAX_DIA*MAX_SAL*MAX_DIS];
- // vetor de solução (variáveis z)
+ // Matriz de solução (variáveis z)
  double vetSolZ_[MAX_TUR*MAX_DIA*MAX_PER];
  // vetor de solução (variáveis q)
  double vetSolQ_[MAX_DIS];
@@ -134,8 +136,8 @@ void montaMatCoefXFO();
 void montaCoefRestJanHor();
 void montarModeloRelaxado(char *arq);
 void initMultiplicadores();
-int ehViavel(Solucao* s);
-void getValSol(Solucao &s, CPXENVptr env, CPXLPptr lp);
+double* getVetViabJanHor(Solucao &sol);
+void getValSol(Solucao *s, CPXENVptr env, CPXLPptr lp);
 //==============================================================================
 
 #endif
