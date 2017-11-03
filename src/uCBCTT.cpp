@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
 
 void execUma(char* nomeInst) {
 	char aux[150];
-	Solucao sol;
+	Solucao* sol;
 
 	strcpy_s(aux, PATH_INST);
 	strcat_s(aux, nomeInst);
@@ -92,7 +92,7 @@ void execUma(char* nomeInst) {
 #else
 	montarModeloPLI(aux);
 #endif
-	execCpx(sol, aux, inst);
+	sol = execCpx(aux, inst);
 	strcpy_s(aux, PATH_INST);
 	strcat_s(aux, nomeInst);
 #ifndef RES_SOFT
@@ -109,7 +109,7 @@ void execTodas() {
 		char aux[150];
 		char nomeInst[20];
 		char temp[10];
-		Solucao sol;
+		Solucao* sol;
 
 		strcpy_s(aux, PATH_INST);
 		strcpy_s(nomeInst, INST);
@@ -137,7 +137,7 @@ void execTodas() {
 #endif 
 		strcat_s(aux, ".lp");
 		montarModeloPLI(aux,inst);
-		execCpx(sol, aux, inst);
+		sol = execCpx(aux, inst);
 		strcpy_s(aux, PATH_INST);
 		strcat_s(aux, nomeInst);
 #ifndef RES_SOFT
@@ -180,9 +180,10 @@ void getValSol(Solucao *sol, CPXENVptr env, CPXLPptr lp, Instancia* inst) {
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-void execCpx(Solucao &s, char *arq, Instancia* inst)
+Solucao* execCpx(char *arq, Instancia* inst)
 {
 	int sts;
+	Solucao* s = (Solucao*) malloc(sizeof(Solucao));
 	clock_t h;
 	CPXENVptr env;
 	CPXLPptr lp;
@@ -190,22 +191,22 @@ void execCpx(Solucao &s, char *arq, Instancia* inst)
 	sts = CPXsetintparam(env, CPX_PARAM_SCRIND, CPX_ON);
 	lp = CPXcreateprob(env, &sts, "");
 	sts = CPXreadcopyprob(env, lp, arq, NULL);
-	s.numVar_ = CPXgetnumcols(env, lp);
-	s.numRes_ = CPXgetnumrows(env, lp);
+	s->numVar_ = CPXgetnumcols(env, lp);
+	s->numRes_ = CPXgetnumrows(env, lp);
 	h = clock();
 	sts = CPXmipopt(env, lp);
 	h = clock() - h;
-	s.tempo_ = (double)h / CLOCKS_PER_SEC;
-	sts = CPXgetmipobjval(env, lp, &s.valSol_);
-	sts = CPXgetbestobjval(env, lp, &s.bstNod_);
+	s->tempo_ = (double)h / CLOCKS_PER_SEC;
+	sts = CPXgetmipobjval(env, lp, &(s->valSol_));
+	sts = CPXgetbestobjval(env, lp, &(s->bstNod_));
 
 	// Pegando os valores das variáveis
-	getValSol(&s, env, lp, inst);
+	getValSol(s, env, lp, inst);
 
 	int pos = 0;
 	printf("\n");
 	for (int c = 0; c < inst->numDis__; c++) {
-		printf("q_%d = %.2f\n", c, s.vetSolQ_[c]);
+		printf("q_%d = %.2f\n", c, s->vetSolQ_[c]);
 	}
 	printf("\n");
 
@@ -230,63 +231,65 @@ void execCpx(Solucao &s, char *arq, Instancia* inst)
 
 	sts = CPXfreeprob(env, &lp);
 	sts = CPXcloseCPLEX(&env);
+
+	return s;
 }
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-void escreverSol(Solucao &s, char *arq, Instancia* inst)
+void escreverSol(Solucao* s, char *arq, Instancia* inst)
 {
 	int pos, dia, per, aux;
 	FILE *f = fopen(arq, "w");
 	fprintf(f, ">>> RESULTADOS DO CPLEX\n\n");
-	fprintf(f, "Num. var....: %d\n", s.numVar_);
-	fprintf(f, "Num. res....: %d\n", s.numRes_);
-	fprintf(f, "Val. sol....: %.2f\n", s.valSol_);
-	fprintf(f, "Melhor no...: %.2f\n", s.bstNod_);
-	if (s.valSol_ != 0)
-		fprintf(f, "GAP.........: %.2f\n", ((s.valSol_ - s.bstNod_) / s.valSol_) * 100);
+	fprintf(f, "Num. var....: %d\n", s->numVar_);
+	fprintf(f, "Num. res....: %d\n", s->numRes_);
+	fprintf(f, "Val. sol....: %.2f\n", s->valSol_);
+	fprintf(f, "Melhor no...: %.2f\n", s->bstNod_);
+	if (s->valSol_ != 0)
+		fprintf(f, "GAP.........: %.2f\n", ((s->valSol_ - s->bstNod_) / s->valSol_) * 100);
 	else
 		fprintf(f, "GAP.........: -\n");
-	fprintf(f, "Tempo.......: %.2f\n", s.tempo_);
+	fprintf(f, "Tempo.......: %.2f\n", s->tempo_);
 	//------------------------------------------------------------- 
 	// preencher a solucao
-	fprintf(f, "\n\n>>> SOLUCAO (<periodo><sala><disciplina>)\n\n", s.tempo_);
+	fprintf(f, "\n\n>>> SOLUCAO (<periodo><sala><disciplina>)\n\n", s->tempo_);
 	for (int p = 0; p < inst->numPerDia__; p++)
 		for (int d = 0; d < inst->numDia__; d++)
 			for (int r = 0; r < inst->numSal__; r++)
-				s.matSolSal_[p][d][r] = -1;
+				s->matSolSal_[p][d][r] = -1;
 	for (int p = 0; p < inst->numPerDia__; p++)
 		for (int d = 0; d < inst->numDia__; d++)
 			for (int u = 0; u < inst->numTur__; u++)
-				s.matSolTur_[p][d][u] = -1;
+				s->matSolTur_[p][d][u] = -1;
 	pos = 0;
 	for (int r = 0; r < inst->numSal__; r++)
 		for (int p = 0; p < inst->numPerTot__; p++)
 			for (int c = 0; c < inst->numDis__; c++)
 			{
-				if (s.vetSol_[pos] > 0)
+				if (s->vetSol_[pos] > 0)
 				{
 					dia = p / inst->numPerDia__;
 					per = p % inst->numPerDia__;
-					fprintf(f, "x_%d_%d_%d = %.2f\n", p, r, c, s.vetSol_[pos]);
-					if (s.matSolSal_[per][dia][r] != -1)
+					fprintf(f, "x_%d_%d_%d = %.2f\n", p, r, c, s->vetSol_[pos]);
+					if (s->matSolSal_[per][dia][r] != -1)
 					{
 						printf("\n\nERRO - SALA %d- p%d d%d c%d!\n\n", r, per, dia, c);
 						_getch();
 					}
 					else
-						s.matSolSal_[per][dia][r] = c;
+						s->matSolSal_[per][dia][r] = c;
 					for (int u = 0; u < inst->numTur__; u++)
 					{
 						if (matDisTur__[c][u] == 1)
 						{
-							if (s.matSolTur_[per][dia][u] != -1)
+							if (s->matSolTur_[per][dia][u] != -1)
 							{
 								printf("\n\nERRO - TURMA %d - p%d d%d c%d!\n\n", u, per, dia, c);
 								_getch();
 							}
 							else
-								s.matSolTur_[per][dia][u] = c;
+								s->matSolTur_[per][dia][u] = c;
 						}
 					}
 				}
@@ -299,7 +302,7 @@ void escreverSol(Solucao &s, char *arq, Instancia* inst)
 		for (int p = 0; p < inst->numPerDia__; p++)
 		{
 			for (int d = 0; d < inst->numDia__; d++)
-				fprintf(f, "%d  ", s.matSolSal_[p][d][r]);
+				fprintf(f, "%d  ", s->matSolSal_[p][d][r]);
 			fprintf(f, "\n");
 		}
 		fprintf(f, "\n");
@@ -311,7 +314,7 @@ void escreverSol(Solucao &s, char *arq, Instancia* inst)
 		for (int p = 0; p < inst->numPerDia__; p++)
 		{
 			for (int d = 0; d < inst->numDia__; d++)
-				fprintf(f, "%d  ", s.matSolTur_[p][d][u]);
+				fprintf(f, "%d  ", s->matSolTur_[p][d][u]);
 			fprintf(f, "\n");
 		}
 		fprintf(f, "\n");
@@ -319,7 +322,7 @@ void escreverSol(Solucao &s, char *arq, Instancia* inst)
 	//------------------------------------------------------------- 
 	// verificar a solucao
 	// HARD
-	s.vioNumAul_ = 0;
+	s->vioNumAul_ = 0;
 	for (int c = 0; c < inst->numDis__; c++)
 	{
 		aux = 0;
@@ -327,66 +330,66 @@ void escreverSol(Solucao &s, char *arq, Instancia* inst)
 		{
 			for (int p = 0; p < inst->numPerDia__; p++)
 				for (int d = 0; d < inst->numDia__; d++)
-					if (s.matSolSal_[p][d][r] == c)
+					if (s->matSolSal_[p][d][r] == c)
 						aux++;
 		}
-		s.vioNumAul_ += abs(inst->vetDisciplinas__[c].numPer_ - aux);
+		s->vioNumAul_ += abs(inst->vetDisciplinas__[c].numPer_ - aux);
 	}
 
-	s.vioAulSim_ = 0;
-	s.vioDisSim_ = 0;
-	s.vioProSim_ = 0;
-	s.vioTurSim_ = 0;
+	s->vioAulSim_ = 0;
+	s->vioDisSim_ = 0;
+	s->vioProSim_ = 0;
+	s->vioTurSim_ = 0;
 	for (int r = 0; r < inst->numSal__; r++)
 	{
 		for (int d = 0; d < inst->numDia__; d++)
 		{
 			for (int p = 0; p < inst->numPerDia__; p++)
 			{
-				if (s.matSolSal_[p][d][r] != -1)
+				if (s->matSolSal_[p][d][r] != -1)
 					for (int r2 = r + 1; r2 < inst->numSal__; r2++)
 					{
-						if (s.matSolSal_[p][d][r2] != -1)
+						if (s->matSolSal_[p][d][r2] != -1)
 						{
-							if (s.matSolSal_[p][d][r2] == s.matSolSal_[p][d][r])
-								s.vioDisSim_++;
-							if (inst->vetDisciplinas__[s.matSolSal_[p][d][r2]].professor_ == inst->vetDisciplinas__[s.matSolSal_[p][d][r]].professor_)
-								s.vioProSim_++;
+							if (s->matSolSal_[p][d][r2] == s->matSolSal_[p][d][r])
+								s->vioDisSim_++;
+							if (inst->vetDisciplinas__[s->matSolSal_[p][d][r2]].professor_ == inst->vetDisciplinas__[s->matSolSal_[p][d][r]].professor_)
+								s->vioProSim_++;
 							for (int u = 0; u < inst->numTur__; u++)
-								if ((matDisTur__[s.matSolSal_[p][d][r2]][u] == 1) && (matDisTur__[s.matSolSal_[p][d][r]][u] == 1))
-									s.vioTurSim_++;
+								if ((matDisTur__[s->matSolSal_[p][d][r2]][u] == 1) && (matDisTur__[s->matSolSal_[p][d][r]][u] == 1))
+									s->vioTurSim_++;
 						}
 					}
 			}
 		}
 	}
 	// SOFT
-	s.capSal_ = 0;
+	s->capSal_ = 0;
 	for (int r = 0; r < inst->numSal__; r++)
 		for (int p = 0; p < inst->numPerDia__; p++)
 			for (int d = 0; d < inst->numDia__; d++)
 			{
-				if (s.matSolSal_[p][d][r] != -1)
-					if (inst->vetDisciplinas__[s.matSolSal_[p][d][r]].numAlu_ > inst->vetSalas__[r].capacidade_)
-						s.capSal_+= inst->vetDisciplinas__[s.matSolSal_[p][d][r]].numAlu_ - inst->vetSalas__[r].capacidade_;
+				if (s->matSolSal_[p][d][r] != -1)
+					if (inst->vetDisciplinas__[s->matSolSal_[p][d][r]].numAlu_ > inst->vetSalas__[r].capacidade_)
+						s->capSal_+= inst->vetDisciplinas__[s->matSolSal_[p][d][r]].numAlu_ - inst->vetSalas__[r].capacidade_;
 			}
 
-	s.janHor_ = 0;
+	s->janHor_ = 0;
 	for (int u = 0; u < inst->numTur__; u++)
 	{
 		for (int d = 0; d < inst->numDia__; d++)
 		{
-			if ((s.matSolTur_[0][d][u] != -1) && (s.matSolTur_[1][d][u] == -1))
-				s.janHor_++;
-			if ((s.matSolTur_[inst->numPerDia__ - 1][d][u] != -1) && (s.matSolTur_[inst->numPerDia__ - 2][d][u] == -1))
-				s.janHor_++;
+			if ((s->matSolTur_[0][d][u] != -1) && (s->matSolTur_[1][d][u] == -1))
+				s->janHor_++;
+			if ((s->matSolTur_[inst->numPerDia__ - 1][d][u] != -1) && (s->matSolTur_[inst->numPerDia__ - 2][d][u] == -1))
+				s->janHor_++;
 			for (int p = 2; p < inst->numPerDia__; p++)
-				if ((s.matSolTur_[p - 1][d][u] != -1) && (s.matSolTur_[p - 2][d][u] == -1) && (s.matSolTur_[p][d][u] == -1))
-					s.janHor_++;
+				if ((s->matSolTur_[p - 1][d][u] != -1) && (s->matSolTur_[p - 2][d][u] == -1) && (s->matSolTur_[p][d][u] == -1))
+					s->janHor_++;
 		}
 	}
 
-	s.diaMin_ = 0;
+	s->diaMin_ = 0;
 	for (int c = 0; c < inst->numDis__; c++)
 	{
 		aux = 0;
@@ -397,7 +400,7 @@ void escreverSol(Solucao &s, char *arq, Instancia* inst)
 			{
 				for (int r = 0; r < inst->numSal__; r++)
 				{
-					if (s.matSolSal_[p][d][r] == c)
+					if (s->matSolSal_[p][d][r] == c)
 					{
 						pos = 1;
 						break;
@@ -409,9 +412,9 @@ void escreverSol(Solucao &s, char *arq, Instancia* inst)
 			aux += pos;
 		}
 		if (aux < inst->vetDisciplinas__[c].diaMin_)
-			s.diaMin_+= inst->vetDisciplinas__[c].diaMin_ - aux;
+			s->diaMin_+= inst->vetDisciplinas__[c].diaMin_ - aux;
 	}
-	s.salDif_ = 0;
+	s->salDif_ = 0;
 	for (int c = 0; c < inst->numDis__; c++)
 	{
 		aux = 0;
@@ -422,7 +425,7 @@ void escreverSol(Solucao &s, char *arq, Instancia* inst)
 			{
 				for (int p = 0; p < inst->numPerDia__; p++)
 				{
-					if (s.matSolSal_[p][d][r] == c)
+					if (s->matSolSal_[p][d][r] == c)
 					{
 						pos = 1;
 						break;
@@ -433,23 +436,23 @@ void escreverSol(Solucao &s, char *arq, Instancia* inst)
 			}
 			aux += pos;
 		}
-		s.salDif_ += aux - 1;
+		s->salDif_ += aux - 1;
 	}
 
-	s.funObj_ = PESOS[0] * s.capSal_ + PESOS[1] * s.janHor_ + PESOS[2] * s.diaMin_ + PESOS[3] * s.salDif_;
-	fprintf(f, "\n\n>>> RESULTADOS CALCULADOS\n\n", s.valSol_);
-	fprintf(f, "Func. obj.....: %d\n", s.funObj_);
+	s->funObj_ = PESOS[0] * s->capSal_ + PESOS[1] * s->janHor_ + PESOS[2] * s->diaMin_ + PESOS[3] * s->salDif_;
+	fprintf(f, "\n\n>>> RESULTADOS CALCULADOS\n\n", s->valSol_);
+	fprintf(f, "Func. obj.....: %d\n", s->funObj_);
 	fprintf(f, "\n\nHARD----------------------------------\n\n");
-	fprintf(f, "Num. aulas....: %d\n", s.vioNumAul_);
-	fprintf(f, "Aulas simul...: %d\n", s.vioAulSim_);
-	fprintf(f, "Disc. simul...: %d\n", s.vioDisSim_);
-	fprintf(f, "Prof. simul...: %d\n", s.vioProSim_);
-	fprintf(f, "Turm. simul...: %d\n", s.vioTurSim_);
+	fprintf(f, "Num. aulas....: %d\n", s->vioNumAul_);
+	fprintf(f, "Aulas simul...: %d\n", s->vioAulSim_);
+	fprintf(f, "Disc. simul...: %d\n", s->vioDisSim_);
+	fprintf(f, "Prof. simul...: %d\n", s->vioProSim_);
+	fprintf(f, "Turm. simul...: %d\n", s->vioTurSim_);
 	fprintf(f, "\n\nSOFT------------------------------------\n\n");
-	fprintf(f, "Cap. salas....: %d\n", s.capSal_);
-	fprintf(f, "Jan. turmas...: %d\n", s.janHor_);
-	fprintf(f, "Dias minimo...: %d\n", s.diaMin_);
-	fprintf(f, "Salas difer...: %d\n", s.salDif_);
+	fprintf(f, "Cap. salas....: %d\n", s->capSal_);
+	fprintf(f, "Jan. turmas...: %d\n", s->janHor_);
+	fprintf(f, "Dias minimo...: %d\n", s->diaMin_);
+	fprintf(f, "Salas difer...: %d\n", s->salDif_);
 	fclose(f);
 }
 //------------------------------------------------------------------------------
@@ -1224,7 +1227,7 @@ void montarModeloRelaxado(char *arq, Instancia* inst, double* vetAlpha) {
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-int getVetViabJanHor(Solucao &sol, double* vetViabJanHor, Instancia* inst) {
+int getVetViabJanHor(Solucao* sol, double* vetViabJanHor, Instancia* inst) {
 
 	int viavel = 1;
 
@@ -1240,10 +1243,10 @@ int getVetViabJanHor(Solucao &sol, double* vetViabJanHor, Instancia* inst) {
 					for (int r = 0; r < inst->numSal__; r++) {
 						int prim = d*inst->numPerDia__;
 						int seg = (d*inst->numPerDia__) + 1;
-						soma += sol.vetSol_[offset3D(r, prim , c, inst->numPerTot__, inst->numDis__)] - sol.vetSol_[offset3D(r, seg, c, inst->numPerTot__, inst->numDis__)];
+						soma += sol->vetSol_[offset3D(r, prim , c, inst->numPerTot__, inst->numDis__)] - sol->vetSol_[offset3D(r, seg, c, inst->numPerTot__, inst->numDis__)];
 					}
 				}
-			vetViabJanHor[pos] = soma <= sol.vetSolZ_[pos] ? 0 : soma - sol.vetSolZ_[pos];
+			vetViabJanHor[pos] = soma <= sol->vetSolZ_[pos] ? 0 : soma - sol->vetSolZ_[pos];
 			if (vetViabJanHor[pos] != 0)
 				viavel = 0;
 			pos++;
@@ -1261,10 +1264,10 @@ int getVetViabJanHor(Solucao &sol, double* vetViabJanHor, Instancia* inst) {
 					for (int r = 0; r < inst->numSal__; r++) {
 						int prim = (d*inst->numPerDia__) + inst->numPerDia__ - 1;
 						int seg = (d*inst->numPerDia__) + inst->numPerDia__ - 2;
-						soma += sol.vetSol_[offset3D(r, prim, c, inst->numPerTot__, inst->numDis__)] - sol.vetSol_[offset3D(r, seg, c, inst->numPerTot__, inst->numDis__)];
+						soma += sol->vetSol_[offset3D(r, prim, c, inst->numPerTot__, inst->numDis__)] - sol->vetSol_[offset3D(r, seg, c, inst->numPerTot__, inst->numDis__)];
 					}
 				}
-			vetViabJanHor[pos] = soma <= sol.vetSolZ_[pos] ? 0 : soma - sol.vetSolZ_[pos];
+			vetViabJanHor[pos] = soma <= sol->vetSolZ_[pos] ? 0 : soma - sol->vetSolZ_[pos];
 			if (vetViabJanHor[pos] != 0)
 				viavel = 0;
 			pos++;
@@ -1285,11 +1288,11 @@ int getVetViabJanHor(Solucao &sol, double* vetViabJanHor, Instancia* inst) {
 							int prim = (d*inst->numPerDia__) + s - 1;
 							int seg = (d*inst->numPerDia__) + s - 2;
 							int ter = (d*inst->numPerDia__) + s;
-							soma += sol.vetSol_[offset3D(r, prim, c, inst->numPerTot__, inst->numDis__)] - sol.vetSol_[offset3D(r, seg, c, inst->numPerTot__, inst->numDis__)] -
-								sol.vetSol_[offset3D(r, ter, c, inst->numPerTot__, inst->numDis__)];
+							soma += sol->vetSol_[offset3D(r, prim, c, inst->numPerTot__, inst->numDis__)] - sol->vetSol_[offset3D(r, seg, c, inst->numPerTot__, inst->numDis__)] -
+								sol->vetSol_[offset3D(r, ter, c, inst->numPerTot__, inst->numDis__)];
 						}
 					}
-				vetViabJanHor[pos] = soma <= sol.vetSolZ_[pos] ? 0 : soma - sol.vetSolZ_[pos];
+				vetViabJanHor[pos] = soma <= sol->vetSolZ_[pos] ? 0 : soma - sol->vetSolZ_[pos];
 				if (vetViabJanHor[pos] != 0)
 					viavel = 0;
 				pos++;

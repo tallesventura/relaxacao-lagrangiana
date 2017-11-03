@@ -143,8 +143,8 @@ typedef struct tInstancia {
 void montarModeloPLI(char *arq, Instancia* inst);
 Instancia* lerInstancia(char *arq);
 
-void execCpx(Solucao &s, char *arq, Instancia* inst);
-void escreverSol(Solucao &s, char *arq, Instancia* inst);
+Solucao* execCpx(char *arq, Instancia* inst);
+void escreverSol(Solucao* s, char *arq, Instancia* inst);
 
 void execUma(char* nomeInst);
 void execTodas();
@@ -154,7 +154,7 @@ void montaMatCoefXFO(Instancia* inst);
 void montaCoefRestJanHor(Instancia* inst);
 void montarModeloRelaxado(char *arq, Instancia* inst, double* vetAlpha);
 void initMultiplicadores(double* vetMult, int tam, double val);
-int getVetViabJanHor(Solucao &sol, double* vetViabJanHor, Instancia* inst);
+int getVetViabJanHor(Solucao* sol, double* vetViabJanHor, Instancia* inst);
 void getValSol(Solucao *sol, CPXENVptr env, CPXLPptr lp, Instancia* inst);
 //==============================================================================
 
