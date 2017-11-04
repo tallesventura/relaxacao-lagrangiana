@@ -7,7 +7,7 @@
 
 //#include "..\lib\cplex\include\cplex.h"
 #include "Colecoes.h"
-//#include "RelLagran.h"
+#include "RelLagran.h"
 
 #define RES_SOFT
 #define RES_CAP_SAL // Restrição soft de capacidade das salas
@@ -17,17 +17,12 @@
 
 #define RELAXAR
 
-//#define REL_CAP_SAL // Relaxar restrição soft de capacidade das salas
-#define	REL_JAN_HOR // Relaxar restrição soft de janelas de horários
-//#define REL_DIA_MIN // Relaxar restrição soft de dias mínimos
-#define REL_SAL_DIF // Relaxar restrição soft de salas diferentes
-
-
 // ------------ Auxiliares
 int matDisTur__[MAX_DIS][MAX_TUR]; // Dis x Cur; 1 se a disciplina d faz parte do currículo c; 0 caso contrário
 
 RestJanHor *vetRestJanHor__; // Vetor com as restrições de janela horário
-RestSalDif *vetRestSalDif__; // Vetor com as restrições de salas diferentes
+RestSalDif *vetRest14__; // Vetor com as restrições do tipo 14 (salas diferentes)
+RestSalDif *vetRest15__; // Vetor com as restrições do tipo 15 (salas diferentes)
 int coefMatXFO[MAX_PER * MAX_DIA][MAX_SAL][MAX_DIS]; // Matriz de coeficientes das variáveis x da FO.
 
 //char INST[50] = "comp";
@@ -82,23 +77,27 @@ void execUma(char* nomeInst) {
 #endif 
 	strcat_s(aux, ".lp");
 #ifdef RELAXAR
-	int numRestAlpha = inst->numTur__*inst->numDia__*inst->numPerDia__;
-	int numRestLambda = inst->numSal__*inst->numDis__;
+	int numRestAlpha = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
+	int numRest14 = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
+	int numRest15 = inst->numSal__*inst->numDis__;
 
-	initVetJanHor(inst);
-	initVetSalDif(inst);
+	vetRestJanHor__ =  getVetJanHor(inst, numRestAlpha);
+	vetRest14__ = getVetSalDif(inst, numRest14);
+	vetRest15__ = getVetSalDif(inst, numRest15);
 
 	montaMatCoefXFO(inst);
 	montaCoefRestJanHor(inst);
 	montaCoefRestSalDif(inst);
 
 	double* vetAlpha = (double*) malloc(numRestAlpha*sizeof(double));
-	double* vetLambda = (double*)malloc(numRestLambda * sizeof(double));
+	double* vetMultRes14 = (double*) malloc(numRest14 * sizeof(double));
+	double* vetMultRes15 = (double*) malloc(numRest15 * sizeof(double));
 
-	//initMultiplicadores(vetAlpha,numRestAlpha,VAL_INIT_ALPHA);
-	//initMultiplicadores(vetLambda, numRestLambda, VAL_INIT_LAMBDA);
+	initMultiplicadores(vetAlpha,numRestAlpha,VAL_INIT_ALPHA);
+	initMultiplicadores(vetMultRes14, numRest14, VAL_INIT_RES_14);
+	initMultiplicadores(vetMultRes15, numRest15, VAL_INIT_RES_15);
 
-	montarModeloRelaxado(aux,inst,vetAlpha,vetLambda);
+	montarModeloRelaxado(aux,inst,vetAlpha, vetMultRes14, vetMultRes15);
 #else
 	montarModeloPLI(aux);
 #endif
@@ -849,14 +848,15 @@ void initRestJanHor(RestJanHor *rest) {
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-void initVetJanHor(Instancia* inst) {
+RestJanHor* getVetJanHor(Instancia* inst, int numRest) {
 
-	int numRest = inst->numTur__*inst->numDia__*inst->numPerDia__;
-	vetRestJanHor__ = (RestJanHor*)malloc(numRest * sizeof(RestJanHor));
+	RestJanHor* vet = (RestJanHor*)malloc(numRest * sizeof(RestJanHor));
 
 	for (int i = 0; i < numRest; i++) {
-		initRestJanHor(&vetRestJanHor__[i]);
+		initRestJanHor(&vet[i]);
 	}
+
+	return vet;
 }
 //------------------------------------------------------------------------------
 
@@ -880,14 +880,15 @@ void initRestSalDif(RestSalDif *rest) {
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-void initVetSalDif(Instancia *inst) {
+RestSalDif* getVetSalDif(Instancia *inst, int numRest) {
 
-	int numRest = inst->numSal__ * inst->numDis__;
-	vetRestSalDif__ = (RestSalDif*) malloc(numRest * sizeof(RestSalDif));
+	RestSalDif *vet = (RestSalDif*) malloc(numRest * sizeof(RestSalDif));
 
 	for (int i = 0; i < numRest; i++) {
-		initRestSalDif(&vetRestSalDif__[i]);
+		initRestSalDif(&vet[i]);
 	}
+
+	return vet;
 }
 //------------------------------------------------------------------------------
 
@@ -983,30 +984,30 @@ void montaCoefRestJanHor(Instancia* inst) {
 
 //------------------------------------------------------------------------------
 void montaCoefRestSalDif(Instancia* inst) {
-	
-	int numRest = inst->numSal__ * inst->numDis__;
 
+	// Restrição 14
+	// for pos = 0; pos < numRest14
 	int pos = 0;
 	for (int p = 0; p < inst->numPerTot__; p++) {
 		for (int r = 0; r < inst->numSal__; r++) {
 			for (int c = 0; c < inst->numDis__; c++) {
-				vetRestSalDif__[pos].coefMatX[p][r][c] = 1;
-				vetRestSalDif__[pos].coefMatY[r][c] = -1;
+				vetRest14__[pos].coefMatX[p][r][c] = 1;
+				vetRest14__[pos].coefMatY[r][c] = -1;
 				pos++;
 			}
 		}
 	}
-				
+		
+	// Restrição 15
+	pos = 0;
 	for (int r = 0; r < inst->numSal__; r++)
 	{
 		for (int c = 0; c < inst->numDis__; c++)
 		{
 			for (int p = 0; p < inst->numPerTot__; p++) {
-				vetRestSalDif__[pos].coefMatX[p][r][c] = 1;
-				printf(" +%d x_%d_%d_%d", vetRestSalDif__[pos].coefMatX[p][r][c], p, r, c);
+				vetRest15__[pos].coefMatX[p][r][c] = 1;
 			}
-			vetRestSalDif__[pos].coefMatY[r][c] = -1;
-			printf("%d y_%d_%d = 0\n", vetRestSalDif__[pos].coefMatY[r][c], r, c);
+			vetRest15__[pos].coefMatY[r][c] = -1;
 			pos++;
 		}
 	}
@@ -1014,11 +1015,13 @@ void montaCoefRestSalDif(Instancia* inst) {
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-void montarModeloRelaxado(char *arq, Instancia* inst, double* vetAlpha, double* vetLambda) {
+void montarModeloRelaxado(char *arq, Instancia* inst, double* vetAlpha, double* vetMultRes14, double* vetMultRes15) {
 
 	FILE *f = fopen(arq, "w");
 
-	int numRest = inst->numTur__*inst->numDia__*inst->numPerDia__;
+	int numRestJanHor = inst->numTur__*inst->numDia__*inst->numPerDia__;
+	int numRest14 = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
+	int numRest15 = inst->numSal__ * inst->numDis__;
 	// ------------------ FO
 	fprintf(f, "MIN\n");
 
@@ -1028,11 +1031,25 @@ void montarModeloRelaxado(char *arq, Instancia* inst, double* vetAlpha, double* 
 		{
 			for (int c = 0; c < inst->numDis__; c++) {
 				
-				double aux = 0;
-				for (int i = 0; i < numRest; i++) {
-					aux -= vetRestJanHor__[i].coefMatX[p][r][c] * vetAlpha[i];
+				// Coeficientes de x das restrições do tipo 10 (Janela de horário) 
+				double somaR10 = 0;
+				for (int i = 0; i < numRestJanHor; i++) {
+					somaR10 -= vetRestJanHor__[i].coefMatX[p][r][c] * vetAlpha[i];
 				}
-				double coef = (PESOS[0] * coefMatXFO[p][r][c]) + aux;
+
+				// Coeficientes de x das restrições do tipo 14 (Salas diferentes) 
+				double somaR14 = 0;
+				for (int i = 0; i < numRest14; i++) {
+					somaR14 -= vetRest14__[i].coefMatX[p][r][c] * vetMultRes14[i];
+				}
+
+				// Coeficientes de x das restrições do tipo 15 (Salas diferentes) 
+				double somaR15 = 0;
+				for (int i = 0; i < numRest15; i++) {
+					somaR15 -= vetRest15__[i].coefMatX[p][r][c] * vetMultRes15[i];
+				}
+
+				double coef = (PESOS[0] * coefMatXFO[p][r][c]) + somaR10 + somaR14 + somaR15;
 				
 				if (coef < 0)
 					fprintf(f, "%f x_%d_%d_%d ", coef, p, r, c);
@@ -1049,11 +1066,13 @@ void montarModeloRelaxado(char *arq, Instancia* inst, double* vetAlpha, double* 
 		for (int d = 0; d < inst->numDia__; d++)
 		{
 			for (int s = 0; s < inst->numPerDia__; s++) {
-				double aux = 0;
-				for (int i = 0; i < numRest; i++) {
-					aux -= vetRestJanHor__[i].coefMatZ[u][d][s] * vetAlpha[i];
+
+				// Coeficientes de z das restrições do tipo 10 (Janela de horário) 
+				double somaR10 = 0;
+				for (int i = 0; i < numRestJanHor; i++) {
+					somaR10 -= vetRestJanHor__[i].coefMatZ[u][d][s] * vetAlpha[i];
 				}
-				double coef = PESOS[1] + aux;
+				double coef = PESOS[1] + somaR10;
 
 				if (coef < 0)
 					fprintf(f, "%f z_%d_%d_%d ", coef, u, d, s);
@@ -1071,8 +1090,27 @@ void montarModeloRelaxado(char *arq, Instancia* inst, double* vetAlpha, double* 
 	fprintf(f, "\n\n\\Salas diferentes\n");
 	for (int c = 0; c < inst->numDis__; c++)
 	{
-		for (int r = 0; r < inst->numSal__; r++)
-			fprintf(f, "+ %d y_%d_%d ", PESOS[3], r, c);
+		for (int r = 0; r < inst->numSal__; r++) {
+			
+			// Coeficientes de y das restrições do tipo 14 (Salas diferentes)
+			double somaR14 = 0;
+			for (int i = 0; i < numRest14; i++) {
+				somaR14 -= vetRest14__[i].coefMatY[r][c] * vetMultRes14[i];
+			}
+
+			// Coeficientes de y das restrições do tipo 15 (Salas diferentes)
+			double somaR15 = 0;
+			for (int i = 0; i < numRest15; i++) {
+				somaR14 -= vetRest15__[i].coefMatY[r][c] * vetMultRes15[i];
+			}
+
+			double coef = PESOS[3] + somaR14 + somaR15;
+
+			if (coef < 0)
+				fprintf(f, "%f y_%d_%d ", coef, r, c);
+			else
+				fprintf(f, "+ %f y_%d_%d ", coef, r, c);
+		}
 		fprintf(f, "\n");
 	}
 
@@ -1223,6 +1261,7 @@ void montarModeloRelaxado(char *arq, Instancia* inst, double* vetAlpha, double* 
 	}
 #endif // !REL_JAN_HOR
 
+#ifndef REL_SAL_DIF
 	fprintf(f, "\n\\R14 - Salas utilizadas por disciplina\n");
 	for (int p = 0; p < inst->numPerTot__; p++)
 	{
@@ -1242,7 +1281,9 @@ void montarModeloRelaxado(char *arq, Instancia* inst, double* vetAlpha, double* 
 		}
 		fprintf(f, "\n");
 	}
-#endif
+#endif // !REL_SAL_DIF
+
+#endif // RES_SOFT
 	fprintf(f, "\nBOUNDS\n");
 	fprintf(f, "\n\\Variáveis x\n");
 	for (int r = 0; r < inst->numSal__; r++)
