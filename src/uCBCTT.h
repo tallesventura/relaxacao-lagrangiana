@@ -70,6 +70,13 @@ typedef struct tRestJanHor {
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
+typedef struct tRestSalDif {
+	int coefMatX[MAX_PER*MAX_DIA][MAX_SAL][MAX_DIS]; // matriz de coeficientes das variáveis x de uma restrição de salas diferentes
+	int coefMatY[MAX_SAL][MAX_DIS];			 // matriz de coeficientes das variáveis y de uma restrição de salas diferentes
+}RestSalDif;
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
 typedef struct tSolucao
 {
  // restrições SOFT
@@ -150,8 +157,11 @@ void execUma(char* nomeInst);
 void execTodas();
 void initRestJanHor(RestJanHor *rest);
 void initVetJanHor(Instancia* inst);
+void initRestSalDif(RestSalDif *rest);
+void initVetSalDif(Instancia *inst);
 void montaMatCoefXFO(Instancia* inst);
 void montaCoefRestJanHor(Instancia* inst);
+void montaCoefRestSalDif(Instancia* inst);
 void montarModeloRelaxado(char *arq, Instancia* inst, double* vetAlpha);
 void initMultiplicadores(double* vetMult, int tam, double val);
 int getVetViabJanHor(Solucao* sol, double* vetViabJanHor, Instancia* inst);

@@ -21,13 +21,14 @@
 //#define REL_CAP_SAL // Relaxar restrição soft de capacidade das salas
 #define	REL_JAN_HOR // Relaxar restrição soft de janelas de horários
 //#define REL_DIA_MIN // Relaxar restrição soft de dias mínimos
-//#define REL_SAL_DIF // Relaxar restrição soft de salas diferentes
+#define REL_SAL_DIF // Relaxar restrição soft de salas diferentes
 
 
 // ------------ Auxiliares
 int matDisTur__[MAX_DIS][MAX_TUR]; // Dis x Cur; 1 se a disciplina d faz parte do currículo c; 0 caso contrário
 
 RestJanHor *vetRestJanHor__; // Vetor com as restrições de janela horário
+RestSalDif *vetRestSalDif__; // Vetor com as restrições de salas diferentes
 int coefMatXFO[MAX_PER * MAX_DIA][MAX_SAL][MAX_DIS]; // Matriz de coeficientes das variáveis x da FO.
 
 //char INST[50] = "comp";
@@ -851,6 +852,37 @@ void initVetJanHor(Instancia* inst) {
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
+void initRestSalDif(RestSalDif *rest) {
+	
+	for (int r = 0; r < MAX_SAL; r++) {
+		for (int c = 0; c < MAX_DIS; c++) {
+			rest->coefMatY[r][c] = 0;
+		}
+	}
+
+	for (int p = 0; p < MAX_PER * MAX_DIA; p++) {
+		for (int r = 0; r < MAX_SAL; r++) {
+			for (int c = 0; c < MAX_DIS; c++) {
+				rest->coefMatX[p][r][c] = 0;
+			}
+		}
+	}
+}
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+void initVetSalDif(Instancia *inst) {
+
+	int numRest = inst->numSal__ * inst->numDis__;
+	vetRestSalDif__ = (RestSalDif*) malloc(numRest * sizeof(RestSalDif));
+
+	for (int i = 0; i < numRest; i++) {
+		initRestSalDif(&vetRestSalDif__[i]);
+	}
+}
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
 void montaMatCoefXFO(Instancia* inst) {
 
 	for (int p = 0; p < MAX_PER * MAX_DIA; p++) {
@@ -880,7 +912,6 @@ void montaCoefRestJanHor(Instancia* inst) {
 
 	int numRest = inst->numTur__*inst->numDia__*inst->numPerDia__;
 
-	
 	// Primeiro período do dia
 	RestJanHor *rest = &vetRestJanHor__[0];
 	for (int u = 0; u < inst->numTur__; u++)
@@ -936,6 +967,36 @@ void montaCoefRestJanHor(Instancia* inst) {
 					}
 				rest->coefMatZ[u][d][s] = -1;
 			}
+		}
+	}
+}
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+void montaCoefRestSalDif(Instancia* inst) {
+	
+	int numRest = inst->numSal__ * inst->numDis__;
+
+	int pos = 0;
+	for (int p = 0; p < inst->numPerTot__; p++) {
+		for (int r = 0; r < inst->numSal__; r++) {
+			for (int c = 0; c < inst->numDis__; c++) {
+				vetRestSalDif__[pos].coefMatX[p][r][c] = 1;
+				vetRestSalDif__[pos].coefMatY[r][c] = -1;
+				pos++;
+			}
+		}
+	}
+				
+	for (int r = 0; r < inst->numSal__; r++)
+	{
+		for (int c = 0; c < inst->numDis__; c++)
+		{
+			for (int p = 0; p < inst->numPerTot__; p++) {
+				vetRestSalDif__[pos].coefMatX[p][r][c] = 1;
+			}
+			vetRestSalDif__[pos].coefMatY[r][c] = -1;
+			pos++;
 		}
 	}
 }
