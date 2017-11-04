@@ -25,8 +25,8 @@ RestSalDif *vetRest14__; // Vetor com as restrições do tipo 14 (salas diferentes
 RestSalDif *vetRest15__; // Vetor com as restrições do tipo 15 (salas diferentes)
 int coefMatXFO[MAX_PER * MAX_DIA][MAX_SAL][MAX_DIS]; // Matriz de coeficientes das variáveis x da FO.
 
-//char INST[50] = "comp";
-char INST[50] = "toy";
+char INST[50] = "comp";
+//char INST[50] = "toy";
 int PESOS[4] = { 1,2,5,1 };
 
 //==============================================================================
@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
 {
 	char nomeInst[10];
 	strcpy_s(nomeInst, INST);
-	strcat_s(nomeInst, "3");
+	strcat_s(nomeInst, "20");
 
 	execUma(nomeInst);
 	//execTodas();
@@ -65,7 +65,7 @@ void execUma(char* nomeInst) {
 	strcpy_s(aux, PATH_INST);
 	strcat_s(aux, nomeInst);
 	strcat_s(aux, ".ctt");
-	printf("%s", aux);
+	printf("%s\n", aux);
 	Instancia* inst = lerInstancia(aux);
 	//lerSolucoesIniciais();
 
@@ -81,26 +81,37 @@ void execUma(char* nomeInst) {
 	int numRest14 = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
 	int numRest15 = inst->numSal__*inst->numDis__;
 
+	printf("Inicializando os vetores de restricoes 10\n");
 	vetRestJanHor__ =  getVetJanHor(inst, numRestAlpha);
+	printf("Inicializando os vetores de restricoes 14\n");
 	vetRest14__ = getVetSalDif(inst, numRest14);
+	printf("Inicializando os vetores de restricoes 15\n");
 	vetRest15__ = getVetSalDif(inst, numRest15);
 
+	printf("Montando a matriz de coeficientes de X da FO\n");
 	montaMatCoefXFO(inst);
+	printf("Montando as matrizes de coeficientes das restricoes de Janela Horario\n");
 	montaCoefRestJanHor(inst);
+	printf("Montando as matrizes de coeficientes das restricoes de Salas Diferentes\n");
 	montaCoefRestSalDif(inst);
 
 	double* vetAlpha = (double*) malloc(numRestAlpha*sizeof(double));
 	double* vetMultRes14 = (double*) malloc(numRest14 * sizeof(double));
 	double* vetMultRes15 = (double*) malloc(numRest15 * sizeof(double));
 
+	printf("Inicializando vetor de multiplicadores das restricoes 10\n");
 	initMultiplicadores(vetAlpha,numRestAlpha,VAL_INIT_ALPHA);
+	printf("Inicializando vetor de multiplicadores das restricoes 14\n");
 	initMultiplicadores(vetMultRes14, numRest14, VAL_INIT_RES_14);
+	printf("Inicializando vetor de multiplicadores das restricoes 15\n");
 	initMultiplicadores(vetMultRes15, numRest15, VAL_INIT_RES_15);
 
+	printf("Montando o modelo relaxado\n");
 	montarModeloRelaxado(aux,inst,vetAlpha, vetMultRes14, vetMultRes15);
 #else
 	montarModeloPLI(aux);
 #endif
+	printf("Executando CPLEX\n");
 	sol = execCpx(aux, inst);
 	strcpy_s(aux, PATH_INST);
 	strcat_s(aux, nomeInst);
@@ -108,6 +119,7 @@ void execUma(char* nomeInst) {
 	strcat_s(aux, "-H");
 #endif 
 	strcat_s(aux, ".sol");
+	printf("Escrevendo Solucao\n");
 	escreverSol(sol, aux, inst);
 	free(inst);
 }
@@ -212,12 +224,12 @@ Solucao* execCpx(char *arq, Instancia* inst)
 	// Pegando os valores das variáveis
 	getValSol(s, env, lp, inst);
 
-	int pos = 0;
+	/*int pos = 0;
 	printf("\n");
 	for (int c = 0; c < inst->numDis__; c++) {
 		printf("q_%d = %.2f\n", c, s->vetSolQ_[c]);
 	}
-	printf("\n");
+	printf("\n");*/
 
 	double* vetViabJanHor = (double*)malloc(inst->numTur__*inst->numDia__*inst->numPerDia__ * sizeof(double));
 	int viavel = getVetViabJanHor(s, vetViabJanHor, inst);
@@ -226,9 +238,9 @@ Solucao* execCpx(char *arq, Instancia* inst)
 	}
 	else {
 		printf("JanHor INVIAVEL:\n");
-		for (int i = 0; i < inst->numTur__*inst->numDia__*inst->numPerDia__; i++) {
+		/*for (int i = 0; i < inst->numTur__*inst->numDia__*inst->numPerDia__; i++) {
 			printf("RES_%d: %.2f\n", i, vetViabJanHor[i]);
-		}
+		}*/
 	}
 	
 	int pfeas, dfeas;
@@ -827,22 +839,16 @@ Instancia* lerInstancia(char *arq)
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-void initRestJanHor(RestJanHor *rest) {
+void initRestJanHor(RestJanHor *rest, Instancia* inst) {
 
-	for (int u = 0; u < MAX_TUR; u++) {
-		for (int d = 0; d < MAX_DIA; d++) {
-			for (int s = 0; s < MAX_PER; s++) {
-				rest->coefMatZ[u][d][s] = 0;
-			}
-		}
+	int numZ = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
+	for (int i = 0; i < numZ; i++) {
+		rest->coefMatZ[i] = 0;
 	}
 
-	for (int p = 0; p < MAX_PER * MAX_DIA; p++) {
-		for (int r = 0; r < MAX_SAL; r++) {
-			for (int c = 0; c < MAX_DIS; c++) {
-				rest->coefMatX[p][r][c] = 0;
-			}
-		}
+	int numX = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
+	for (int i = 0; i < numX; i++) {
+		rest->coefMatX[i] = 0;
 	}
 }
 //------------------------------------------------------------------------------
@@ -853,7 +859,7 @@ RestJanHor* getVetJanHor(Instancia* inst, int numRest) {
 	RestJanHor* vet = (RestJanHor*)malloc(numRest * sizeof(RestJanHor));
 
 	for (int i = 0; i < numRest; i++) {
-		initRestJanHor(&vet[i]);
+		initRestJanHor(&vet[i], inst);
 	}
 
 	return vet;
@@ -861,20 +867,16 @@ RestJanHor* getVetJanHor(Instancia* inst, int numRest) {
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-void initRestSalDif(RestSalDif *rest) {
+void initRestSalDif(RestSalDif *rest, Instancia* inst) {
 	
-	for (int r = 0; r < MAX_SAL; r++) {
-		for (int c = 0; c < MAX_DIS; c++) {
-			rest->coefMatY[r][c] = 0;
-		}
+	int numY = inst->numSal__ * inst->numDis__;
+	for (int i = 0; i < numY; i++) {
+			rest->coefMatY[i] = 0;
 	}
 
-	for (int p = 0; p < MAX_PER * MAX_DIA; p++) {
-		for (int r = 0; r < MAX_SAL; r++) {
-			for (int c = 0; c < MAX_DIS; c++) {
-				rest->coefMatX[p][r][c] = 0;
-			}
-		}
+	int numX = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
+	for (int i = 0; i < numX; i++) {
+		rest->coefMatX[i] = 0;
 	}
 }
 //------------------------------------------------------------------------------
@@ -885,7 +887,7 @@ RestSalDif* getVetSalDif(Instancia *inst, int numRest) {
 	RestSalDif *vet = (RestSalDif*) malloc(numRest * sizeof(RestSalDif));
 
 	for (int i = 0; i < numRest; i++) {
-		initRestSalDif(&vet[i]);
+		initRestSalDif(&vet[i], inst);
 	}
 
 	return vet;
@@ -932,11 +934,11 @@ void montaCoefRestJanHor(Instancia* inst) {
 				if (matDisTur__[c][u] == 1)
 				{
 					for (int r = 0; r < inst->numSal__; r++) {
-						rest->coefMatX[d*inst->numPerDia__][r][c] = 1;
-						rest->coefMatX[(d*inst->numPerDia__) + 1][r][c] = -1;
+						rest->coefMatX[offset3D(r, d*inst->numPerDia__, c, inst->numPerTot__, inst->numDis__)] = 1;
+						rest->coefMatX[offset3D(r, d*inst->numPerDia__ + 1, c, inst->numPerTot__, inst->numDis__)] = -1;
 					}
 				}
-			rest->coefMatZ[u][d][0] = -1;
+			rest->coefMatZ[offset3D(u, d, 0, inst->numDia__, inst->numPerDia__)] = -1;
 		}
 	}
 
@@ -950,11 +952,11 @@ void montaCoefRestJanHor(Instancia* inst) {
 				if (matDisTur__[c][u] == 1)
 				{
 					for (int r = 0; r < inst->numSal__; r++) {
-						rest->coefMatX[(d*inst->numPerDia__) + inst->numPerDia__ - 1][r][c] = 1;
-						rest->coefMatX[(d*inst->numPerDia__) + inst->numPerDia__ - 2][r][c] = -1;
+						rest->coefMatX[offset3D(r, (d*inst->numPerDia__) + inst->numPerDia__ - 1, c, inst->numPerTot__, inst->numDis__)] = 1;
+						rest->coefMatX[offset3D(r, (d*inst->numPerDia__) + inst->numPerDia__ - 2, c, inst->numPerTot__, inst->numDis__)] = -1;
 					}
 				}
-			rest->coefMatZ[u][d][1] = -1;
+			rest->coefMatZ[offset3D(u, d, 1, inst->numDia__, inst->numPerDia__)] = -1;
 		}
 	}
 
@@ -970,12 +972,12 @@ void montaCoefRestJanHor(Instancia* inst) {
 					if (matDisTur__[c][u] == 1)
 					{
 						for (int r = 0; r < inst->numSal__; r++) {
-							rest->coefMatX[(d*inst->numPerDia__) + s - 1][r][c] = 1;
-							rest->coefMatX[(d*inst->numPerDia__) + s - 2][r][c] = -1;
-							rest->coefMatX[(d*inst->numPerDia__) + s][r][c] = -1;
+							rest->coefMatX[offset3D(r, (d*inst->numPerDia__) + s - 1, c, inst->numPerTot__, inst->numDis__)] = 1;
+							rest->coefMatX[offset3D(r, (d*inst->numPerDia__) + s - 2, c, inst->numPerTot__, inst->numDis__)] = -1;
+							rest->coefMatX[offset3D(r, (d*inst->numPerDia__) + s, c, inst->numPerTot__, inst->numDis__)] = -1;
 						}
 					}
-				rest->coefMatZ[u][d][s] = -1;
+				rest->coefMatZ[offset3D(u, d, s, inst->numDia__, inst->numPerDia__)] = -1;
 			}
 		}
 	}
@@ -991,8 +993,8 @@ void montaCoefRestSalDif(Instancia* inst) {
 	for (int p = 0; p < inst->numPerTot__; p++) {
 		for (int r = 0; r < inst->numSal__; r++) {
 			for (int c = 0; c < inst->numDis__; c++) {
-				vetRest14__[pos].coefMatX[p][r][c] = 1;
-				vetRest14__[pos].coefMatY[r][c] = -1;
+				vetRest14__[pos].coefMatX[offset3D(r, p, c, inst->numPerTot__, inst->numDis__)] = 1;
+				vetRest14__[pos].coefMatY[offset2D(c, r, inst->numSal__)] = -1;
 				pos++;
 			}
 		}
@@ -1005,9 +1007,9 @@ void montaCoefRestSalDif(Instancia* inst) {
 		for (int c = 0; c < inst->numDis__; c++)
 		{
 			for (int p = 0; p < inst->numPerTot__; p++) {
-				vetRest15__[pos].coefMatX[p][r][c] = 1;
+				vetRest15__[pos].coefMatX[offset3D(r, p, c, inst->numPerTot__, inst->numDis__)] = 1;
 			}
-			vetRest15__[pos].coefMatY[r][c] = -1;
+			vetRest15__[pos].coefMatY[offset2D(c, r, inst->numSal__)] = -1;
 			pos++;
 		}
 	}
@@ -1034,19 +1036,19 @@ void montarModeloRelaxado(char *arq, Instancia* inst, double* vetAlpha, double* 
 				// Coeficientes de x das restrições do tipo 10 (Janela de horário) 
 				double somaR10 = 0;
 				for (int i = 0; i < numRestJanHor; i++) {
-					somaR10 -= vetRestJanHor__[i].coefMatX[p][r][c] * vetAlpha[i];
+					somaR10 -= vetRestJanHor__[i].coefMatX[offset3D(r, p, c, inst->numPerTot__, inst->numDis__)] * vetAlpha[i];
 				}
 
 				// Coeficientes de x das restrições do tipo 14 (Salas diferentes) 
 				double somaR14 = 0;
 				for (int i = 0; i < numRest14; i++) {
-					somaR14 -= vetRest14__[i].coefMatX[p][r][c] * vetMultRes14[i];
+					somaR14 -= vetRest14__[i].coefMatX[offset3D(r, p, c, inst->numPerTot__, inst->numDis__)] * vetMultRes14[i];
 				}
 
 				// Coeficientes de x das restrições do tipo 15 (Salas diferentes) 
 				double somaR15 = 0;
 				for (int i = 0; i < numRest15; i++) {
-					somaR15 -= vetRest15__[i].coefMatX[p][r][c] * vetMultRes15[i];
+					somaR15 -= vetRest15__[i].coefMatX[offset3D(r, p, c, inst->numPerTot__, inst->numDis__)] * vetMultRes15[i];
 				}
 
 				double coef = (PESOS[0] * coefMatXFO[p][r][c]) + somaR10 + somaR14 + somaR15;
@@ -1070,7 +1072,7 @@ void montarModeloRelaxado(char *arq, Instancia* inst, double* vetAlpha, double* 
 				// Coeficientes de z das restrições do tipo 10 (Janela de horário) 
 				double somaR10 = 0;
 				for (int i = 0; i < numRestJanHor; i++) {
-					somaR10 -= vetRestJanHor__[i].coefMatZ[u][d][s] * vetAlpha[i];
+					somaR10 -= vetRestJanHor__[i].coefMatZ[offset3D(u, d, s, inst->numDia__, inst->numPerDia__)] * vetAlpha[i];
 				}
 				double coef = PESOS[1] + somaR10;
 
@@ -1095,13 +1097,13 @@ void montarModeloRelaxado(char *arq, Instancia* inst, double* vetAlpha, double* 
 			// Coeficientes de y das restrições do tipo 14 (Salas diferentes)
 			double somaR14 = 0;
 			for (int i = 0; i < numRest14; i++) {
-				somaR14 -= vetRest14__[i].coefMatY[r][c] * vetMultRes14[i];
+				somaR14 -= vetRest14__[i].coefMatY[offset2D(c, r, inst->numSal__)] * vetMultRes14[i];
 			}
 
 			// Coeficientes de y das restrições do tipo 15 (Salas diferentes)
 			double somaR15 = 0;
 			for (int i = 0; i < numRest15; i++) {
-				somaR14 -= vetRest15__[i].coefMatY[r][c] * vetMultRes15[i];
+				somaR14 -= vetRest15__[i].coefMatY[offset2D(c, r, inst->numSal__)] * vetMultRes15[i];
 			}
 
 			double coef = PESOS[3] + somaR14 + somaR15;

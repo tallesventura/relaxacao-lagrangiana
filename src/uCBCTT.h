@@ -67,15 +67,15 @@ typedef struct tRestricao
 
 //------------------------------------------------------------------------------
 typedef struct tRestJanHor {
-	int coefMatX[MAX_PER*MAX_DIA][MAX_SAL][MAX_DIS]; // matriz de coeficientes das variáveis x de uma restrição de janela de horário
-	int coefMatZ[MAX_TUR][MAX_DIA][MAX_PER];		 // matriz de coeficientes das variáveis z de uma restrição de janela de horário
+	int coefMatX[MAX_PER*MAX_DIA*MAX_SAL*MAX_DIS]; // matriz de coeficientes das variáveis x de uma restrição de janela de horário
+	int coefMatZ[MAX_TUR*MAX_DIA*MAX_PER];		   // matriz de coeficientes das variáveis z de uma restrição de janela de horário
 }RestJanHor;
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
 typedef struct tRestSalDif {
-	int coefMatX[MAX_PER*MAX_DIA][MAX_SAL][MAX_DIS]; // matriz de coeficientes das variáveis x de uma restrição de salas diferentes
-	int coefMatY[MAX_SAL][MAX_DIS];			 // matriz de coeficientes das variáveis y de uma restrição de salas diferentes
+	int coefMatX[MAX_PER*MAX_DIA*MAX_SAL*MAX_DIS]; // matriz de coeficientes das variáveis x de uma restrição de salas diferentes
+	int coefMatY[MAX_SAL*MAX_DIS];			       // matriz de coeficientes das variáveis y de uma restrição de salas diferentes
 }RestSalDif;
 //------------------------------------------------------------------------------
 
@@ -158,9 +158,9 @@ void escreverSol(Solucao* s, char *arq, Instancia* inst);
 
 void execUma(char* nomeInst);
 void execTodas();
-void initRestJanHor(RestJanHor *rest);
+void initRestJanHor(RestJanHor *rest, Instancia* inst);
 RestJanHor* getVetJanHor(Instancia* inst, int numRest);
-void initRestSalDif(RestSalDif *rest);
+void initRestSalDif(RestSalDif *rest, Instancia* inst);
 RestSalDif* getVetSalDif(Instancia *inst, int numRest);
 void montaMatCoefXFO(Instancia* inst);
 void montaCoefRestJanHor(Instancia* inst);
