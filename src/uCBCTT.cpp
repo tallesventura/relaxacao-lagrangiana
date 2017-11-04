@@ -1,14 +1,13 @@
 #include "uCBCTT.h"
-#include "RelLagran.h"
 
 #include <stdio.h>
 #include <string.h>
 #include <conio.h>
 #include <time.h>
-#include "..\lib\cplex\include\cplex.h"
-#include "Colecoes.h"
 
-#define MAX(x,y) (((x) > (y)) ? (x) : (y))
+//#include "..\lib\cplex\include\cplex.h"
+#include "Colecoes.h"
+//#include "RelLagran.h"
 
 #define RES_SOFT
 #define RES_CAP_SAL // Restrição soft de capacidade das salas
@@ -43,7 +42,7 @@ int main(int argc, char *argv[])
 {
 	char nomeInst[10];
 	strcpy_s(nomeInst, INST);
-	//strcat_s(nomeInst, "3");
+	strcat_s(nomeInst, "3");
 
 	execUma(nomeInst);
 	//execTodas();
@@ -83,13 +82,23 @@ void execUma(char* nomeInst) {
 #endif 
 	strcat_s(aux, ".lp");
 #ifdef RELAXAR
-	int numRest = inst->numTur__*inst->numDia__*inst->numPerDia__;
+	int numRestAlpha = inst->numTur__*inst->numDia__*inst->numPerDia__;
+	int numRestLambda = inst->numSal__*inst->numDis__;
+
 	initVetJanHor(inst);
+	initVetSalDif(inst);
+
 	montaMatCoefXFO(inst);
 	montaCoefRestJanHor(inst);
-	double* vetAlpha = (double*) malloc(numRest*sizeof(double));
-	initMultiplicadores(vetAlpha,numRest,VAL_INIT_ALPHA);
-	montarModeloRelaxado(aux,inst,vetAlpha);
+	montaCoefRestSalDif(inst);
+
+	double* vetAlpha = (double*) malloc(numRestAlpha*sizeof(double));
+	double* vetLambda = (double*)malloc(numRestLambda * sizeof(double));
+
+	//initMultiplicadores(vetAlpha,numRestAlpha,VAL_INIT_ALPHA);
+	//initMultiplicadores(vetLambda, numRestLambda, VAL_INIT_LAMBDA);
+
+	montarModeloRelaxado(aux,inst,vetAlpha,vetLambda);
 #else
 	montarModeloPLI(aux);
 #endif
@@ -994,8 +1003,10 @@ void montaCoefRestSalDif(Instancia* inst) {
 		{
 			for (int p = 0; p < inst->numPerTot__; p++) {
 				vetRestSalDif__[pos].coefMatX[p][r][c] = 1;
+				printf(" +%d x_%d_%d_%d", vetRestSalDif__[pos].coefMatX[p][r][c], p, r, c);
 			}
 			vetRestSalDif__[pos].coefMatY[r][c] = -1;
+			printf("%d y_%d_%d = 0\n", vetRestSalDif__[pos].coefMatY[r][c], r, c);
 			pos++;
 		}
 	}
@@ -1003,7 +1014,7 @@ void montaCoefRestSalDif(Instancia* inst) {
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-void montarModeloRelaxado(char *arq, Instancia* inst, double* vetAlpha) {
+void montarModeloRelaxado(char *arq, Instancia* inst, double* vetAlpha, double* vetLambda) {
 
 	FILE *f = fopen(arq, "w");
 

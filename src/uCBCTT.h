@@ -3,6 +3,9 @@
 
 #include "..\lib\cplex\include\cplex.h"
 
+#define MAX(x,y) (((x) > (y)) ? (x) : (y))
+#define MIN(x,y) (((x) < (y)) ? (x) : (y))
+
 #define PATH_INST "instances\\"
 #define NUM_INST 21 // número de instâncias
 
@@ -162,7 +165,7 @@ void initVetSalDif(Instancia *inst);
 void montaMatCoefXFO(Instancia* inst);
 void montaCoefRestJanHor(Instancia* inst);
 void montaCoefRestSalDif(Instancia* inst);
-void montarModeloRelaxado(char *arq, Instancia* inst, double* vetAlpha);
+void montarModeloRelaxado(char *arq, Instancia* inst, double* vetAlpha, double* vetLambda);
 void initMultiplicadores(double* vetMult, int tam, double val);
 int getVetViabJanHor(Solucao* sol, double* vetViabJanHor, Instancia* inst);
 void getValSol(Solucao *sol, CPXENVptr env, CPXLPptr lp, Instancia* inst);

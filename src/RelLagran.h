@@ -1,7 +1,7 @@
 #ifndef RelLagranH
 #define RelLagranH
 
-#include "uCBCTT.h";
+#include "uCBCTT.h"
 
 #define VAL_INIT_ALPHA 0 // Valor usado para inicializar os valores dos multiplicadores de lagrange
 

@@ -2,16 +2,10 @@
 //#include "uCBCTT.h"
 
 #include <stdio.h>
-#include <string.h>
-#include <conio.h>
 #include <time.h>
 #include <math.h>
 
-#include <algorithm>
-
-#include "..\lib\cplex\include\cplex.h"
-
-// coefs originais da FO, 
+ // coefs originais da FO, 
 Solucao* execRelLagran(char* arq, double* vetAlpha, int tamAlpha, Instancia* inst, RestJanHor *vetRestJanHor, int coefMatXFO[MAX_PER * MAX_DIA][MAX_SAL][MAX_DIS]) {
 
 	Solucao *solRel, *bestSol;
@@ -23,11 +17,11 @@ Solucao* execRelLagran(char* arq, double* vetAlpha, int tamAlpha, Instancia* ins
 
 	// subgradientes
 	while (gap > 2.0) {
-		solRel = (Solucao*) execCpx(arq, inst);
+		solRel = (Solucao*)execCpx(arq, inst);
 
 		// Gerar solucao viável
 
-		lb = std::max(lb, solRel->valSol_);
+		lb = MAX(lb, solRel->valSol_);
 
 		if (eta <= 0.001)
 			break;
@@ -36,4 +30,3 @@ Solucao* execRelLagran(char* arq, double* vetAlpha, int tamAlpha, Instancia* ins
 
 	return bestSol;
 }
-	
