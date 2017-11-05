@@ -1370,6 +1370,226 @@ void montarModeloRelaxado(char *arq, Instancia* inst, double* vetAlpha, double* 
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
+void montarModeloRelaxadoMemoria(CPXCENVptr* env, CPXLPptr* lp, Instancia* inst, double* vetAlpha, double* vetMultRes14, double* vetMultRes15) {
+
+	// VARIÁVEIS C -------------------------------------------------------
+	int ccnt = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
+	double *obj    = (double*) malloc(ccnt * sizeof(double));
+	double *lb     = (double*) malloc(ccnt * sizeof(double));
+	double *ub     = (double*) malloc(ccnt * sizeof(double));
+	char* xctype   = (char*)   malloc(ccnt * sizeof(char));
+	char** colname = (char**)  malloc(ccnt * sizeof(char*));
+
+	int pos = 0;
+	int numRestJanHor = inst->numTur__*inst->numDia__*inst->numPerDia__;
+	int numRest14 = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
+	int numRest15 = inst->numSal__ * inst->numDis__;
+
+	for (int r = 0; r < inst->numSal__; r++) {
+		for (int p = 0; p < inst->numPerTot__; p++) {
+			for (int c = 0; c < inst->numDis__; c++) {
+				lb[pos] = 0;
+				ub[pos] = 1;
+				xctype[pos] = 'B';
+				colname[pos] = (char*)malloc(10 * sizeof(char));
+				char aux[3];
+				strcat(colname[pos], "x_");
+				strcat(colname[pos], itoa(p,aux,10));
+				strcat(colname[pos], "_");
+				strcat(colname[pos], itoa(r, aux, 10));
+				strcat(colname[pos], "_");
+				strcat(colname[pos], itoa(c, aux, 10));
+				
+				// Coeficientes de x das restrições do tipo 10 (Janela de horário) 
+				double somaR10 = 0;
+				for (int i = 0; i < numRestJanHor; i++) {
+					somaR10 -= vetRestJanHor__[i].coefMatX[offset3D(r, p, c, inst->numPerTot__, inst->numDis__)] * vetAlpha[i];
+				}
+
+				// Coeficientes de x das restrições do tipo 14 (Salas diferentes) 
+				double somaR14 = 0;
+				for (int i = 0; i < numRest14; i++) {
+					somaR14 -= vetRest14__[i].coefMatX[offset3D(r, p, c, inst->numPerTot__, inst->numDis__)] * vetMultRes14[i];
+				}
+
+				// Coeficientes de x das restrições do tipo 15 (Salas diferentes) 
+				double somaR15 = 0;
+				for (int i = 0; i < numRest15; i++) {
+					somaR15 -= vetRest15__[i].coefMatX[offset3D(r, p, c, inst->numPerTot__, inst->numDis__)] * vetMultRes15[i];
+				}
+
+				obj[pos] = (PESOS[0] * coefMatXFO[p][r][c]) + somaR10 + somaR14 + somaR15;
+
+				pos++;
+			}
+		}
+	}
+
+	CPXnewcols(*env, *lp, ccnt, obj, lb, ub, xctype, colname);
+	// -------------------------------------------------------------------
+
+	// VARIÁVEIS Z -------------------------------------------------------
+	ccnt = inst->numTur__*inst->numDia__*inst->numPerDia__;
+	obj = (double*)malloc(ccnt * sizeof(double));
+	lb = (double*)malloc(ccnt * sizeof(double));
+	ub = (double*)malloc(ccnt * sizeof(double));
+	xctype = (char*)malloc(ccnt * sizeof(char));
+	colname = (char**)malloc(ccnt * sizeof(char*));
+
+	pos = 0;
+	for (int u = 0; u < inst->numTur__; u++)
+	{
+		for (int d = 0; d < inst->numDia__; d++)
+		{
+			for (int s = 0; s < inst->numPerDia__; s++) {
+
+				lb[pos] = 0;
+				ub[pos] = 1;
+				xctype[pos] = 'B';
+				colname[pos] = (char*)malloc(10 * sizeof(char));
+				char aux[3];
+				strcat(colname[pos], "z_");
+				strcat(colname[pos], itoa(u, aux, 10));
+				strcat(colname[pos], "_");
+				strcat(colname[pos], itoa(d, aux, 10));
+				strcat(colname[pos], "_");
+				strcat(colname[pos], itoa(s, aux, 10));
+
+				// Coeficientes de z das restrições do tipo 10 (Janela de horário) 
+				double somaR10 = 0;
+				for (int i = 0; i < numRestJanHor; i++) {
+					somaR10 -= vetRestJanHor__[i].coefMatZ[offset3D(u, d, s, inst->numDia__, inst->numPerDia__)] * vetAlpha[i];
+				}
+				obj[pos] = PESOS[1] + somaR10;
+
+				pos++;
+			}
+		}
+	}
+
+	CPXnewcols(*env, *lp, ccnt, obj, lb, ub, xctype, colname);
+	// -------------------------------------------------------------------
+
+	// VARIÁVEIS Q -------------------------------------------------------
+	ccnt = inst->numDis__;
+	obj = (double*)malloc(ccnt * sizeof(double));
+	lb = (double*)malloc(ccnt * sizeof(double));
+	ub = (double*)malloc(ccnt * sizeof(double));
+	xctype = (char*)malloc(ccnt * sizeof(char));
+	colname = (char**)malloc(ccnt * sizeof(char*));
+
+	pos = 0;
+	for (int c = 0; c < inst->numDis__; c++) {
+		lb[pos] = 0;
+		ub[pos] = inst->numDia__;
+		xctype[pos] = 'I';
+		colname[pos] = (char*)malloc(10 * sizeof(char));
+		char aux[3];
+		strcat(colname[pos], "q_");
+		strcat(colname[pos], itoa(c, aux, 10));
+		obj[pos] = PESOS[2];
+		
+		pos++;
+	}
+		
+	CPXnewcols(*env, *lp, ccnt, obj, lb, ub, xctype, colname);
+	// -------------------------------------------------------------------
+
+	// VARIÁVEIS Y -------------------------------------------------------
+	ccnt = inst->numSal__ * inst->numDis__;
+	obj = (double*)malloc(ccnt * sizeof(double));
+	lb = (double*)malloc(ccnt * sizeof(double));
+	ub = (double*)malloc(ccnt * sizeof(double));
+	xctype = (char*)malloc(ccnt * sizeof(char));
+	colname = (char**)malloc(ccnt * sizeof(char*));
+
+	pos = 0;
+
+	for (int c = 0; c < inst->numDis__; c++)
+	{
+		for (int r = 0; r < inst->numSal__; r++) {
+
+			lb[pos] = 0;
+			ub[pos] = 1;
+			xctype[pos] = 'B';
+			colname[pos] = (char*)malloc(10 * sizeof(char));
+			char aux[3];
+			strcat(colname[pos], "y_");
+			strcat(colname[pos], itoa(r, aux, 10));
+			strcat(colname[pos], "_");
+			strcat(colname[pos], itoa(c, aux, 10));
+
+			// Coeficientes de y das restrições do tipo 14 (Salas diferentes)
+			double somaR14 = 0;
+			for (int i = 0; i < numRest14; i++) {
+				somaR14 -= vetRest14__[i].coefMatY[offset2D(c, r, inst->numSal__)] * vetMultRes14[i];
+			}
+
+			// Coeficientes de y das restrições do tipo 15 (Salas diferentes)
+			double somaR15 = 0;
+			for (int i = 0; i < numRest15; i++) {
+				somaR14 -= vetRest15__[i].coefMatY[offset2D(c, r, inst->numSal__)] * vetMultRes15[i];
+			}
+
+			obj[pos] = PESOS[3] + somaR14 + somaR15;
+
+			pos++;
+		}
+	}
+
+	CPXnewcols(*env, *lp, ccnt, obj, lb, ub, xctype, colname);
+	// -------------------------------------------------------------------
+
+	// VARIÁVEL VAL ------------------------------------------------------
+	ccnt = 1;
+	obj = (double*)malloc(ccnt * sizeof(double));
+	lb = (double*)malloc(ccnt * sizeof(double));
+	ub = (double*)malloc(ccnt * sizeof(double));
+	xctype = (char*)malloc(ccnt * sizeof(char));
+	colname = (char**)malloc(ccnt * sizeof(char*));
+
+	pos = 0;
+
+	xctype[pos] = 'I';
+	colname[pos] = "val";
+	char aux[3];
+	obj[pos] = inst->numDis__;
+
+	CPXnewcols(*env, *lp, ccnt, obj, NULL, NULL, xctype, colname);
+	// -------------------------------------------------------------------
+
+	// VARIÁVEIS V -------------------------------------------------------
+	ccnt = inst->numDia__ * inst->numDis__;
+	lb = (double*)malloc(ccnt * sizeof(double));
+	ub = (double*)malloc(ccnt * sizeof(double));
+	xctype = (char*)malloc(ccnt * sizeof(char));
+	colname = (char**)malloc(ccnt * sizeof(char*));
+
+	pos = 0;
+	for (int c = 0; c < inst->numDis__; c++) {
+		for (int d = 0; d < inst->numDia__; d++) {
+
+			lb[pos] = 0;
+			ub[pos] = 1;
+			xctype[pos] = 'B';
+			colname[pos] = (char*)malloc(10 * sizeof(char));
+			char aux[3];
+			strcat(colname[pos], "v_");
+			strcat(colname[pos], itoa(d, aux, 10));
+			strcat(colname[pos], "_");
+			strcat(colname[pos], itoa(c, aux, 10));
+			pos++;
+		}
+	}
+
+	CPXnewcols(*env, *lp, ccnt, NULL, lb, ub, xctype, colname);
+	// -------------------------------------------------------------------
+
+	//Implementar as restricoes
+}
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
 int getVetViabJanHor(Solucao* sol, double* vetViabJanHor, Instancia* inst) {
 
 	int viavel = 1;
