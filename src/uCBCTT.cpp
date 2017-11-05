@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
 {
 	char nomeInst[10];
 	strcpy_s(nomeInst, INST);
-	strcat_s(nomeInst, "20");
+	strcat_s(nomeInst, "05");
 
 	execUma(nomeInst);
 	//execTodas();
@@ -109,7 +109,7 @@ void execUma(char* nomeInst) {
 	printf("Montando o modelo relaxado\n");
 	montarModeloRelaxado(aux,inst,vetAlpha, vetMultRes14, vetMultRes15);
 #else
-	montarModeloPLI(aux);
+	montarModeloPLI(aux, inst);
 #endif
 	printf("Executando CPLEX\n");
 	sol = execCpx(aux, inst);
@@ -240,6 +240,34 @@ Solucao* execCpx(char *arq, Instancia* inst)
 		printf("JanHor INVIAVEL:\n");
 		/*for (int i = 0; i < inst->numTur__*inst->numDia__*inst->numPerDia__; i++) {
 			printf("RES_%d: %.2f\n", i, vetViabJanHor[i]);
+		}*/
+	}
+	printf("\n");
+
+	// Restrição 14
+	double* vetViab14 = (double*)malloc(inst->numPerTot__*inst->numSal__*inst->numDis__ * sizeof(double));
+	viavel = getViabSalDif14(s, vetViab14, inst);
+	if (viavel) {
+		printf("SalDif_14 VIAVEL\n");
+	}
+	else {
+		printf("SalDif_14 INVIAVEL:\n");
+		/*for (int i = 0; i < inst->numPerTot__*inst->numSal__*inst->numDis__; i++) {
+			printf("RES_%d: %.2f\n", i, vetViab14[i]);
+		}*/
+	}
+	printf("\n");
+
+	// Restrição 15
+	double* vetViab15 = (double*)malloc(inst->numSal__*inst->numDis__ * sizeof(double));
+	viavel = getViabSalDif15(s, vetViab15, inst);
+	if (viavel) {
+		printf("SalDif_15 VIAVEL\n");
+	}
+	else {
+		printf("SalDif_15 INVIAVEL:\n");
+		/*for (int i = 0; i < inst->numSal__*inst->numDis__; i++) {
+			printf("RES_%d: %.2f\n", i, vetViab15[i]);
 		}*/
 	}
 	
@@ -1412,6 +1440,65 @@ int getVetViabJanHor(Solucao* sol, double* vetViabJanHor, Instancia* inst) {
 					viavel = 0;
 				pos++;
 			}
+		}
+	}
+
+	return viavel;
+}
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+int getViabSalDif14(Solucao* sol, double* vetViab, Instancia* inst) {
+
+	int viavel = 1;
+
+	int pos = 0;
+	for (int p = 0; p < inst->numPerTot__; p++) {
+		for (int r = 0; r < inst->numSal__; r++) {
+			for (int c = 0; c < inst->numDis__; c++) {
+				double x = sol->vetSol_[offset3D(r, p, c, inst->numPerTot__, inst->numDis__)];
+				double y = sol->vetSolY_[offset2D(c, r, inst->numSal__)];
+				if (x <= y) {
+					vetViab[pos] = 0;
+				}
+				else {
+					printf("RES_%d: %f - %f \n", pos, x, y);
+					vetViab[pos] = x - y;
+					viavel = 0;
+				}
+				pos++;
+			}
+		}
+	}
+
+	return viavel;
+}
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+int getViabSalDif15(Solucao* sol, double* vetViab, Instancia* inst) {
+
+	int viavel = 1;
+
+	int pos = 0;
+	for (int r = 0; r < inst->numSal__; r++) {
+		for (int c = 0; c < inst->numDis__; c++) {
+
+			double soma = 0;
+			for (int p = 0; p < inst->numPerTot__; p++) {
+				soma += sol->vetSol_[offset3D(r, p, c, inst->numPerTot__, inst->numDis__)];
+			}
+
+			double y = sol->vetSolY_[offset2D(c, r, inst->numSal__)];
+			if (soma >= y) {
+				vetViab[pos] = 0;
+			}
+			else {
+				printf("RES_%d: %f - %f \n", pos, soma, y);
+				vetViab[pos] = soma - y;
+				viavel = 0;
+			}
+			pos++;
 		}
 	}
 
