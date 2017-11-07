@@ -171,6 +171,7 @@ int getVetViabJanHor(Solucao* sol, double* vetViabJanHor, Instancia* inst);
 int getViabSalDif14(Solucao* sol, double* vetViab, Instancia* inst);
 int getViabSalDif15(Solucao* sol, double* vetViab, Instancia* inst);
 void getValSol(Solucao *sol, CPXENVptr env, CPXLPptr lp, Instancia* inst);
+void exportarCsv(Solucao* sol, char *arq, Instancia* inst);
 //==============================================================================
 
 #endif

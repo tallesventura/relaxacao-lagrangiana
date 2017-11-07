@@ -3,6 +3,8 @@ x64
 lib
 Debug
 
+*.xlsx
+*.csv
 *.lp
 *.sol
 *.vcxproj

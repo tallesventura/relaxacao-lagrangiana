@@ -16,6 +16,7 @@
 #define RES_SAL_DIF // Restrição soft de salas diferentes
 
 #define RELAXAR
+#define ESCREVE_CSV
 
 // ------------ Auxiliares
 int matDisTur__[MAX_DIS][MAX_TUR]; // Dis x Cur; 1 se a disciplina d faz parte do currículo c; 0 caso contrário
@@ -25,8 +26,8 @@ RestSalDif *vetRest14__; // Vetor com as restrições do tipo 14 (salas diferentes
 RestSalDif *vetRest15__; // Vetor com as restrições do tipo 15 (salas diferentes)
 int coefMatXFO[MAX_PER * MAX_DIA][MAX_SAL][MAX_DIS]; // Matriz de coeficientes das variáveis x da FO.
 
-char INST[50] = "comp";
-//char INST[50] = "toy";
+//char INST[50] = "comp";
+char INST[50] = "toy";
 int PESOS[4] = { 1,2,5,1 };
 
 //==============================================================================
@@ -37,7 +38,7 @@ int main(int argc, char *argv[])
 {
 	char nomeInst[10];
 	strcpy_s(nomeInst, INST);
-	strcat_s(nomeInst, "05");
+	//strcat_s(nomeInst, "05");
 
 	execUma(nomeInst);
 	//execTodas();
@@ -118,6 +119,12 @@ void execUma(char* nomeInst) {
 #ifndef RES_SOFT
 	strcat_s(aux, "-H");
 #endif 
+#ifdef ESCREVE_CSV
+	char csv[50];
+	strcpy_s(csv, aux);
+	strcat_s(csv, ".csv");
+	exportarCsv(sol, csv, inst);
+#endif
 	strcat_s(aux, ".sol");
 	printf("Escrevendo Solucao\n");
 	escreverSol(sol, aux, inst);
@@ -1586,6 +1593,53 @@ void montarModeloRelaxadoMemoria(CPXCENVptr* env, CPXLPptr* lp, Instancia* inst,
 	// -------------------------------------------------------------------
 
 	//Implementar as restricoes
+	// VAL
+
+	int numX = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
+	int numZ = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
+	int numQ = inst->numDis__;
+	int numVal = 1;
+	int numY = inst->numSal__ * inst->numDis__;
+	int numV = inst->numDia__ * inst->numDis__;
+	int numVarTot = numX + numZ + numQ + numY + numVal + numV;
+
+	// R1
+	int rcnt = inst->numDis__;
+	int nzcnt = 0;
+	double** matCoef = getMat2DDouble(rcnt, numVarTot, 0);
+	double* rhs = (double*)malloc(rcnt * sizeof(double));
+
+	for (int c = 0; c < inst->numDis__; c++)
+	{
+		for (int p = 0; p < inst->numPerTot__; p++) {
+			for (int r = 0; r < inst->numSal__; r++) {
+				matCoef[c][offset3D(r, p, c, inst->numPerTot__, inst->numDis__)] = 1;
+				nzcnt++;
+			}	
+		}	
+		rhs[c] = inst->vetDisciplinas__[c].numPer_;
+	}
+
+	double *matind = (double*)malloc(nzcnt * sizeof(double));
+	double *matval = (double*)malloc(nzcnt * sizeof(double));
+
+	pos = 0;
+	for (int c = 0; c < inst->numDis__; c++)
+	{
+		for (int p = 0; p < inst->numPerTot__; p++) {
+			for (int r = 0; r < inst->numSal__; r++) {
+				int col = offset3D(r, p, c, inst->numPerTot__, inst->numDis__);
+				int coef = matCoef[c][col];
+				if (coef != 0) {
+					matval[pos] = coef;
+					matind[pos] = col;
+					pos++;
+				}
+
+				
+			}
+		}
+	}
 }
 //------------------------------------------------------------------------------
 
@@ -1682,7 +1736,7 @@ int getViabSalDif14(Solucao* sol, double* vetViab, Instancia* inst) {
 					vetViab[pos] = 0;
 				}
 				else {
-					printf("RES_%d: %f - %f \n", pos, x, y);
+					//printf("RES_%d: %f - %f \n", pos, x, y);
 					vetViab[pos] = x - y;
 					viavel = 0;
 				}
@@ -1723,5 +1777,76 @@ int getViabSalDif15(Solucao* sol, double* vetViab, Instancia* inst) {
 	}
 
 	return viavel;
+}
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+void exportarCsv(Solucao* sol, char *arq, Instancia* inst) {
+
+	FILE *f = fopen(arq, "w");
+
+	for (int r = 0; r < inst->numSal__; r++) {
+		for (int p = 0; p < inst->numPerTot__; p++) {
+			for (int c = 0; c < inst->numDis__; c++) {
+
+				fprintf(f,"x_%d_%d_%d,", p, r, c);
+			}
+		}
+	}
+
+	for (int u = 0; u < inst->numTur__; u++) {
+		for (int d = 0; d < inst->numDia__; d++) {
+			for (int s = 0; s < inst->numPerDia__; s++) {
+				fprintf(f, "z_%d_%d_%d,", u, d, s);
+			}
+		}
+	}
+
+	for (int c = 0; c < inst->numDis__; c++) {
+		fprintf(f, "q_%d,", c);
+	}
+
+	for (int c = 0; c < inst->numDis__; c++) {
+		for (int r = 0; r < inst->numSal__; r++) {
+			fprintf(f, "y_%d_%d,", r, c);
+		}
+	}
+
+	for (int c = 0; c < inst->numDis__; c++) {
+		for (int d = 0; d < inst->numDia__; d++) {
+			fprintf(f, "v_%d_%d,", d, c);
+		}
+	}
+
+	fprintf(f, "\n");
+
+	int numX = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
+	for (int i = 0; i < numX; i++) {
+		fprintf(f, "%.3f,", sol->vetSol_[i]);
+	}
+
+	int numZ = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
+	for (int i = 0; i < numZ; i++) {
+		fprintf(f, "%.3f,", sol->vetSolZ_[i]);
+	}
+
+	int numQ = inst->numDis__;
+	for (int i = 0; i < numQ; i++) {
+		fprintf(f, "%.3f,", sol->vetSolQ_[i]);
+	}
+
+	int numY = inst->numSal__ * inst->numDis__;
+	for (int i = 0; i < numY; i++) {
+		fprintf(f, "%.3f,", sol->vetSolY_[i]);
+	}
+
+	int numV = inst->numDia__ * inst->numDis__;
+	for (int i = 0; i < numV; i++) {
+		fprintf(f, "%.3f,", sol->vetSolV_[i]);
+	}
+
+	fprintf(f, "\n");
+
+	fclose(f);
 }
 //------------------------------------------------------------------------------
