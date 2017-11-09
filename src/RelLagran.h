@@ -2,6 +2,8 @@
 #define RelLagranH
 
 #include "uCBCTT.h"
+#include "Solucao.h"
+#include "ValoresLimites.h"
 
 //#define REL_CAP_SAL // Relaxar restrição soft de capacidade das salas
 #define	REL_JAN_HOR // Relaxar restrição soft de janelas de horários

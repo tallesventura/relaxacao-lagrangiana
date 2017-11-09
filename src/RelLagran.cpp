@@ -1,5 +1,4 @@
 #include "RelLagran.h"
-//#include "uCBCTT.h"
 
 #include <stdio.h>
 #include <time.h>

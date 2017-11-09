@@ -1,7 +1,8 @@
 #ifndef SolucaoH
 #define SolucaoH
 
-//#include "uCBCTT.h"
+#include "ValoresLimites.h"
+#include "Instancia.h"
 
 typedef struct tSolucao
 {
@@ -50,10 +51,10 @@ typedef struct tSolucao
 	// matriz de solução (período x dia x turma)
 	int matSolTur_[MAX_PER][MAX_DIA][MAX_TUR];
 }Solucao;
-
-
-// MÉTODOS ===================================================================================
-
-Solucao* execRelLagran(char* arq, double* vetAlpha, int tamAlpha, Instancia* inst, RestJanHor *vetRestJanHor, int coefMatXFO[MAX_PER * MAX_DIA][MAX_SAL][MAX_DIS]);
-
+//
+//
+//// MÉTODOS ===================================================================================
+//
+void escreverSol(Solucao* s, char *arq, Instancia* inst);
+//
 #endif // Solucao
