@@ -16,7 +16,7 @@
 #define RES_SAL_DIF // Restrição soft de salas diferentes
 
 #define RELAXAR
-#define ESCREVE_CSV
+//#define ESCREVE_CSV
 
 // ------------ Auxiliares
 int matDisTur__[MAX_DIS][MAX_TUR]; // Dis x Cur; 1 se a disciplina d faz parte do currículo c; 0 caso contrário
@@ -238,6 +238,7 @@ Solucao* execCpx(char *arq, Instancia* inst)
 	}
 	printf("\n");*/
 
+	printf("JANELA HORARIO\n");
 	double* vetViabJanHor = (double*)malloc(inst->numTur__*inst->numDia__*inst->numPerDia__ * sizeof(double));
 	int viavel = getVetViabJanHor(s, vetViabJanHor, inst);
 	if (viavel) {
@@ -252,6 +253,7 @@ Solucao* execCpx(char *arq, Instancia* inst)
 	printf("\n");
 
 	// Restrição 14
+	printf("RES 14\n");
 	double* vetViab14 = (double*)malloc(inst->numPerTot__*inst->numSal__*inst->numDis__ * sizeof(double));
 	viavel = getViabSalDif14(s, vetViab14, inst);
 	if (viavel) {
@@ -266,6 +268,7 @@ Solucao* execCpx(char *arq, Instancia* inst)
 	printf("\n");
 
 	// Restrição 15
+	printf("RES 15\n");
 	double* vetViab15 = (double*)malloc(inst->numSal__*inst->numDis__ * sizeof(double));
 	viavel = getViabSalDif15(s, vetViab15, inst);
 	if (viavel) {
@@ -1664,8 +1667,11 @@ int getVetViabJanHor(Solucao* sol, double* vetViabJanHor, Instancia* inst) {
 					}
 				}
 			vetViabJanHor[pos] = soma <= sol->vetSolZ_[pos] ? 0 : soma - sol->vetSolZ_[pos];
-			if (vetViabJanHor[pos] != 0)
+			if (vetViabJanHor[pos] != 0) {
 				viavel = 0;
+				printf("RES_%d (z_%d_%d_%d): %f <= %f\n", pos, u, d, 0, soma, sol->vetSolZ_[pos]);
+			}
+				
 			pos++;
 		}
 	}
@@ -1685,8 +1691,11 @@ int getVetViabJanHor(Solucao* sol, double* vetViabJanHor, Instancia* inst) {
 					}
 				}
 			vetViabJanHor[pos] = soma <= sol->vetSolZ_[pos] ? 0 : soma - sol->vetSolZ_[pos];
-			if (vetViabJanHor[pos] != 0)
+			if (vetViabJanHor[pos] != 0) {
 				viavel = 0;
+				printf("RES_%d (z_%d_%d_%d): %f <= %f\n", pos, u, d, 1, soma, sol->vetSolZ_[pos]);
+			}
+				
 			pos++;
 		}
 	}
@@ -1710,8 +1719,11 @@ int getVetViabJanHor(Solucao* sol, double* vetViabJanHor, Instancia* inst) {
 						}
 					}
 				vetViabJanHor[pos] = soma <= sol->vetSolZ_[pos] ? 0 : soma - sol->vetSolZ_[pos];
-				if (vetViabJanHor[pos] != 0)
+				if (vetViabJanHor[pos] != 0) {
 					viavel = 0;
+					printf("RES_%d (z_%d_%d_%d): %f <= %f\n", pos, u, d, s, soma, sol->vetSolZ_[pos]);
+				}
+					
 				pos++;
 			}
 		}
@@ -1736,7 +1748,7 @@ int getViabSalDif14(Solucao* sol, double* vetViab, Instancia* inst) {
 					vetViab[pos] = 0;
 				}
 				else {
-					//printf("RES_%d: %f - %f \n", pos, x, y);
+					printf("RES_%d (x_%d_%d_%d <= y_%d_%d): %f <= %f \n", pos, p, r, c, r, c, x, y);
 					vetViab[pos] = x - y;
 					viavel = 0;
 				}
@@ -1768,7 +1780,7 @@ int getViabSalDif15(Solucao* sol, double* vetViab, Instancia* inst) {
 				vetViab[pos] = 0;
 			}
 			else {
-				printf("RES_%d: %f - %f \n", pos, soma, y);
+				printf("RES_%d (y_%d_%d): %f >= %f \n", pos, r, c, soma, y);
 				vetViab[pos] = soma - y;
 				viavel = 0;
 			}
