@@ -125,7 +125,7 @@ void execUma(char* nomeInst) {
 #endif
 	strcat_s(aux, ".sol");
 	printf("Escrevendo Solucao\n");
-	//escreverSol(sol, aux, inst);
+	escreverSol(sol, aux, inst);
 	free(inst);
 }
 
@@ -170,7 +170,7 @@ void execTodas() {
 		strcat_s(aux, "-H");
 #endif 
 		strcat_s(aux, ".sol");
-		//escreverSol(sol, aux, inst);
+		escreverSol(sol, aux, inst);
 		free(inst);
 	}
 }
@@ -226,11 +226,11 @@ Solucao* execCpx(char *arq, Instancia* inst)
 	sts = CPXgetmipobjval(env, lp, &(s->valSol_));
 	sts = CPXgetbestobjval(env, lp, &(s->bstNod_));
 
-	// Inicializando as matrizes de solucao
-	montaSolucao(s, inst);
-
 	// Pegando os valores das variáveis
 	getValSol(s, env, lp, inst);
+
+	// Inicializando as matrizes de solucao
+	montaSolucao(s, inst);
 
 	/*int pos = 0;
 	printf("\n");
