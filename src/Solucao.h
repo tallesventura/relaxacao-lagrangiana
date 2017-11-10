@@ -54,7 +54,12 @@ typedef struct tSolucao
 //
 //
 //// MÉTODOS ===================================================================================
-//
+
 void escreverSol(Solucao* s, char *arq, Instancia* inst);
-//
+void contaViolacoes(Solucao *s, Instancia* inst);
+void montaSolucao(Solucao *s, Instancia* inst);
+void montaSolucao(Solucao *s, Instancia* inst);
+void viabilizaSol(Solucao *s, Instancia* inst);
+void imprimeZ(Solucao *sol, Instancia* inst);
+void imprimeY(Solucao *sol, Instancia* inst);
 #endif // Solucao

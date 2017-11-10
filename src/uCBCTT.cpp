@@ -226,6 +226,9 @@ Solucao* execCpx(char *arq, Instancia* inst)
 	sts = CPXgetmipobjval(env, lp, &(s->valSol_));
 	sts = CPXgetbestobjval(env, lp, &(s->bstNod_));
 
+	// Inicializando as matrizes de solucao
+	montaSolucao(s, inst);
+
 	// Pegando os valores das variáveis
 	getValSol(s, env, lp, inst);
 
@@ -236,9 +239,11 @@ Solucao* execCpx(char *arq, Instancia* inst)
 	}
 	printf("\n");*/
 
-	printf("JANELA HORARIO\n");
-	double* vetViabJanHor = (double*)malloc(inst->numTur__*inst->numDia__*inst->numPerDia__ * sizeof(double));
-	int viavel = getVetViabJanHor(s, vetViabJanHor, inst);
+
+	// ----------------------------------------------------------------------------------
+	printf("Antes da viabilizacao\n");
+	s->vetViabJanHor_ = (double*)malloc(inst->numTur__*inst->numDia__*inst->numPerDia__ * sizeof(double));
+	int viavel = getVetViabJanHor(s, inst);
 	if (viavel) {
 		printf("JanHor VIAVEL\n");
 	}
@@ -248,12 +253,11 @@ Solucao* execCpx(char *arq, Instancia* inst)
 			printf("RES_%d: %.2f\n", i, vetViabJanHor[i]);
 		}*/
 	}
-	printf("\n");
+	//printf("\n");
 
 	// Restrição 14
-	printf("RES 14\n");
-	double* vetViab14 = (double*)malloc(inst->numPerTot__*inst->numSal__*inst->numDis__ * sizeof(double));
-	viavel = getViabSalDif14(s, vetViab14, inst);
+	s->vetViab14_ = (double*)malloc(inst->numPerTot__*inst->numSal__*inst->numDis__ * sizeof(double));
+	viavel = getViabSalDif14(s, inst);
 	if (viavel) {
 		printf("SalDif_14 VIAVEL\n");
 	}
@@ -263,12 +267,11 @@ Solucao* execCpx(char *arq, Instancia* inst)
 			printf("RES_%d: %.2f\n", i, vetViab14[i]);
 		}*/
 	}
-	printf("\n");
+	//printf("\n");
 
 	// Restrição 15
-	printf("RES 15\n");
-	double* vetViab15 = (double*)malloc(inst->numSal__*inst->numDis__ * sizeof(double));
-	viavel = getViabSalDif15(s, vetViab15, inst);
+	s->vetViab15_ = (double*)malloc(inst->numSal__*inst->numDis__ * sizeof(double));
+	viavel = getViabSalDif15(s, inst);
 	if (viavel) {
 		printf("SalDif_15 VIAVEL\n");
 	}
@@ -278,6 +281,54 @@ Solucao* execCpx(char *arq, Instancia* inst)
 			printf("RES_%d: %.2f\n", i, vetViab15[i]);
 		}*/
 	}
+	//imprimeZ(s, inst);
+	//imprimeY(s, inst);
+	printf("\n");
+	// ----------------------------------------------------------------------------------
+
+	printf("Depois da viabilizacao\n");
+	viabilizaSol(s, inst);
+	s->vetViabJanHor_ = (double*)malloc(inst->numTur__*inst->numDia__*inst->numPerDia__ * sizeof(double));
+	viavel = getVetViabJanHor(s, inst);
+	if (viavel) {
+		printf("JanHor VIAVEL\n");
+	}
+	else {
+		printf("JanHor INVIAVEL:\n");
+		/*for (int i = 0; i < inst->numTur__*inst->numDia__*inst->numPerDia__; i++) {
+		printf("RES_%d: %.2f\n", i, vetViabJanHor[i]);
+		}*/
+	}
+	//printf("\n");
+
+	// Restrição 14
+	s->vetViab14_ = (double*)malloc(inst->numPerTot__*inst->numSal__*inst->numDis__ * sizeof(double));
+	viavel = getViabSalDif14(s, inst);
+	if (viavel) {
+		printf("SalDif_14 VIAVEL\n");
+	}
+	else {
+		printf("SalDif_14 INVIAVEL:\n");
+		/*for (int i = 0; i < inst->numPerTot__*inst->numSal__*inst->numDis__; i++) {
+		printf("RES_%d: %.2f\n", i, vetViab14[i]);
+		}*/
+	}
+	//printf("\n");
+
+	// Restrição 15
+	s->vetViab15_ = (double*)malloc(inst->numSal__*inst->numDis__ * sizeof(double));
+	viavel = getViabSalDif15(s, inst);
+	if (viavel) {
+		printf("SalDif_15 VIAVEL\n");
+	}
+	else {
+		printf("SalDif_15 INVIAVEL:\n");
+		/*for (int i = 0; i < inst->numSal__*inst->numDis__; i++) {
+		printf("RES_%d: %.2f\n", i, vetViab15[i]);
+		}*/
+	}
+	//imprimeZ(s, inst);
+	//imprimeY(s, inst);
 	
 	int pfeas, dfeas;
 	sts = CPXsolninfo(env, lp, NULL, NULL, &pfeas, &dfeas);
@@ -1424,7 +1475,7 @@ void montarModeloRelaxadoMemoria(CPXCENVptr* env, CPXLPptr* lp, Instancia* inst,
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-int getVetViabJanHor(Solucao* sol, double* vetViabJanHor, Instancia* inst) {
+int getVetViabJanHor(Solucao* sol, Instancia* inst) {
 
 	int viavel = 1;
 
@@ -1443,10 +1494,11 @@ int getVetViabJanHor(Solucao* sol, double* vetViabJanHor, Instancia* inst) {
 						soma += sol->vetSol_[offset3D(r, prim , c, inst->numPerTot__, inst->numDis__)] - sol->vetSol_[offset3D(r, seg, c, inst->numPerTot__, inst->numDis__)];
 					}
 				}
-			vetViabJanHor[pos] = soma <= sol->vetSolZ_[pos] ? 0 : soma - sol->vetSolZ_[pos];
-			if (vetViabJanHor[pos] != 0) {
+			int z = sol->vetSolZ_[offset3D(u, d, 0, inst->numDia__, inst->numPerDia__)];
+			sol->vetViabJanHor_[pos] = soma <= z ? 0 : soma - z;
+			if (sol->vetViabJanHor_[pos] != 0) {
 				viavel = 0;
-				printf("RES_%d (z_%d_%d_%d): %f <= %f\n", pos, u, d, 0, soma, sol->vetSolZ_[pos]);
+				//printf("RES_%d (z_%d_%d_%d): %f <= %f\n", pos, u, d, 0, soma, sol->vetSolZ_[pos]);
 			}
 				
 			pos++;
@@ -1467,10 +1519,11 @@ int getVetViabJanHor(Solucao* sol, double* vetViabJanHor, Instancia* inst) {
 						soma += sol->vetSol_[offset3D(r, prim, c, inst->numPerTot__, inst->numDis__)] - sol->vetSol_[offset3D(r, seg, c, inst->numPerTot__, inst->numDis__)];
 					}
 				}
-			vetViabJanHor[pos] = soma <= sol->vetSolZ_[pos] ? 0 : soma - sol->vetSolZ_[pos];
-			if (vetViabJanHor[pos] != 0) {
+			int z = sol->vetSolZ_[offset3D(u, d, 1, inst->numDia__, inst->numPerDia__)];
+			sol->vetViabJanHor_[pos] = soma <= z ? 0 : soma - z;
+			if (sol->vetViabJanHor_[pos] != 0) {
 				viavel = 0;
-				printf("RES_%d (z_%d_%d_%d): %f <= %f\n", pos, u, d, 1, soma, sol->vetSolZ_[pos]);
+				//printf("RES_%d (z_%d_%d_%d): %f <= %f\n", pos, u, d, 1, soma, sol->vetSolZ_[pos]);
 			}
 				
 			pos++;
@@ -1495,10 +1548,11 @@ int getVetViabJanHor(Solucao* sol, double* vetViabJanHor, Instancia* inst) {
 								sol->vetSol_[offset3D(r, ter, c, inst->numPerTot__, inst->numDis__)];
 						}
 					}
-				vetViabJanHor[pos] = soma <= sol->vetSolZ_[pos] ? 0 : soma - sol->vetSolZ_[pos];
-				if (vetViabJanHor[pos] != 0) {
+				int z = sol->vetSolZ_[offset3D(u, d, s, inst->numDia__, inst->numPerDia__)];
+				sol->vetViabJanHor_[pos] = soma <= z ? 0 : soma - z;
+				if (sol->vetViabJanHor_[pos] != 0) {
 					viavel = 0;
-					printf("RES_%d (z_%d_%d_%d): %f <= %f\n", pos, u, d, s, soma, sol->vetSolZ_[pos]);
+					//printf("RES_%d (z_%d_%d_%d): %f <= %f\n", pos, u, d, s, soma, sol->vetSolZ_[pos]);
 				}
 					
 				pos++;
@@ -1511,7 +1565,7 @@ int getVetViabJanHor(Solucao* sol, double* vetViabJanHor, Instancia* inst) {
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-int getViabSalDif14(Solucao* sol, double* vetViab, Instancia* inst) {
+int getViabSalDif14(Solucao* sol, Instancia* inst) {
 
 	int viavel = 1;
 
@@ -1522,11 +1576,11 @@ int getViabSalDif14(Solucao* sol, double* vetViab, Instancia* inst) {
 				double x = sol->vetSol_[offset3D(r, p, c, inst->numPerTot__, inst->numDis__)];
 				double y = sol->vetSolY_[offset2D(c, r, inst->numSal__)];
 				if (x <= y) {
-					vetViab[pos] = 0;
+					sol->vetViab14_[pos] = 0;
 				}
 				else {
-					printf("RES_%d (x_%d_%d_%d <= y_%d_%d): %f <= %f \n", pos, p, r, c, r, c, x, y);
-					vetViab[pos] = x - y;
+					//printf("RES_%d (x_%d_%d_%d <= y_%d_%d): %f <= %f \n", pos, p, r, c, r, c, x, y);
+					sol->vetViab14_[pos] = x - y;
 					viavel = 0;
 				}
 				pos++;
@@ -1539,7 +1593,7 @@ int getViabSalDif14(Solucao* sol, double* vetViab, Instancia* inst) {
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-int getViabSalDif15(Solucao* sol, double* vetViab, Instancia* inst) {
+int getViabSalDif15(Solucao* sol, Instancia* inst) {
 
 	int viavel = 1;
 
@@ -1554,11 +1608,11 @@ int getViabSalDif15(Solucao* sol, double* vetViab, Instancia* inst) {
 
 			double y = sol->vetSolY_[offset2D(c, r, inst->numSal__)];
 			if (soma >= y) {
-				vetViab[pos] = 0;
+				sol->vetViab15_[pos] = 0;
 			}
 			else {
-				printf("RES_%d (y_%d_%d): %f >= %f \n", pos, r, c, soma, y);
-				vetViab[pos] = soma - y;
+				//printf("RES_%d (y_%d_%d): %f >= %f \n", pos, r, c, soma, y);
+				sol->vetViab15_[pos] = soma - y;
 				viavel = 0;
 			}
 			pos++;

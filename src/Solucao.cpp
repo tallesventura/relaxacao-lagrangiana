@@ -4,6 +4,7 @@
 #include<stdio.h>
 
 #include "Solucao.h"
+#include "Colecoes.h"
 
 //------------------------------------------------------------------------------
 void escreverSol(Solucao* s, char *arq, Instancia* inst)
@@ -40,7 +41,6 @@ void escreverSol(Solucao* s, char *arq, Instancia* inst)
 				{
 					dia = p / inst->numPerDia__;
 					per = p % inst->numPerDia__;
-					fprintf(f, "x_%d_%d_%d = %.2f\n", p, r, c, s->vetSol_[pos]);
 					if (s->matSolSal_[per][dia][r] != -1)
 					{
 						printf("\n\nERRO - SALA %d- p%d d%d c%d!\n\n", r, per, dia, c);
@@ -223,5 +223,232 @@ void escreverSol(Solucao* s, char *arq, Instancia* inst)
 	fprintf(f, "Dias minimo...: %d\n", s->diaMin_);
 	fprintf(f, "Salas difer...: %d\n", s->salDif_);
 	fclose(f);
+}
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+void initMats(Solucao *s, Instancia* inst) {
+
+	for (int p = 0; p < inst->numPerDia__; p++)
+		for (int d = 0; d < inst->numDia__; d++)
+			for (int r = 0; r < inst->numSal__; r++)
+				s->matSolSal_[p][d][r] = -1;
+	for (int p = 0; p < inst->numPerDia__; p++)
+		for (int d = 0; d < inst->numDia__; d++)
+			for (int u = 0; u < inst->numTur__; u++)
+				s->matSolTur_[p][d][u] = -1;
+	int pos = 0;
+	for (int r = 0; r < inst->numSal__; r++)
+		for (int p = 0; p < inst->numPerTot__; p++)
+			for (int c = 0; c < inst->numDis__; c++)
+			{
+				if (s->vetSol_[pos] > 0)
+				{
+					int dia = p / inst->numPerDia__;
+					int per = p % inst->numPerDia__;
+					if (s->matSolSal_[per][dia][r] == -1)
+					{
+						s->matSolSal_[per][dia][r] = c;
+					}
+
+					for (int u = 0; u < inst->numTur__; u++) {
+						if (inst->matDisTur__[c][u] == 1) {
+							if (s->matSolTur_[per][dia][u] == -1) {
+								s->matSolTur_[per][dia][u] = c;
+							}
+						}
+					}
+				}
+				pos++;
+			}
+}
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+void contaViolacoes(Solucao *s, Instancia* inst) {
+
+	// Calculando as violacoes
+	// SOFT
+	int aux, pos;
+	s->capSal_ = 0;
+	for (int r = 0; r < inst->numSal__; r++)
+		for (int p = 0; p < inst->numPerDia__; p++)
+			for (int d = 0; d < inst->numDia__; d++)
+			{
+				if (s->matSolSal_[p][d][r] != -1)
+					if (inst->vetDisciplinas__[s->matSolSal_[p][d][r]].numAlu_ > inst->vetSalas__[r].capacidade_)
+						s->capSal_ += inst->vetDisciplinas__[s->matSolSal_[p][d][r]].numAlu_ - inst->vetSalas__[r].capacidade_;
+			}
+
+	s->janHor_ = 0;
+	for (int u = 0; u < inst->numTur__; u++)
+	{
+		for (int d = 0; d < inst->numDia__; d++)
+		{
+			if ((s->matSolTur_[0][d][u] != -1) && (s->matSolTur_[1][d][u] == -1))
+				s->janHor_++;
+			if ((s->matSolTur_[inst->numPerDia__ - 1][d][u] != -1) && (s->matSolTur_[inst->numPerDia__ - 2][d][u] == -1))
+				s->janHor_++;
+			for (int p = 2; p < inst->numPerDia__; p++)
+				if ((s->matSolTur_[p - 1][d][u] != -1) && (s->matSolTur_[p - 2][d][u] == -1) && (s->matSolTur_[p][d][u] == -1))
+					s->janHor_++;
+		}
+	}
+
+	s->diaMin_ = 0;
+	for (int c = 0; c < inst->numDis__; c++)
+	{
+		aux = 0;
+		for (int d = 0; d < inst->numDia__; d++)
+		{
+			pos = 0;
+			for (int p = 0; p < inst->numPerDia__; p++)
+			{
+				for (int r = 0; r < inst->numSal__; r++)
+				{
+					if (s->matSolSal_[p][d][r] == c)
+					{
+						pos = 1;
+						break;
+					}
+				}
+				if (pos == 1)
+					break;
+			}
+			aux += pos;
+		}
+		if (aux < inst->vetDisciplinas__[c].diaMin_)
+			s->diaMin_ += inst->vetDisciplinas__[c].diaMin_ - aux;
+	}
+
+	s->salDif_ = 0;
+	for (int c = 0; c < inst->numDis__; c++)
+	{
+		aux = 0;
+		for (int r = 0; r < inst->numSal__; r++)
+		{
+			pos = 0;
+			for (int d = 0; d < inst->numDia__; d++)
+			{
+				for (int p = 0; p < inst->numPerDia__; p++)
+				{
+					if (s->matSolSal_[p][d][r] == c)
+					{
+						pos = 1;
+						break;
+					}
+				}
+				if (pos == 1)
+					break;
+			}
+			aux += pos;
+		}
+		s->salDif_ += aux - 1;
+	}
+}
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+void montaSolucao(Solucao *s, Instancia* inst) {
+
+	initMats(s, inst);
+	contaViolacoes(s, inst);
+	
+}
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+void viabilizaSol(Solucao *s, Instancia* inst) {
+	
+	printf("Entrou viabilizacao\n");
+	// Variáveis Z
+	for (int u = 0; u < inst->numTur__; u++)
+	{
+		for (int d = 0; d < inst->numDia__; d++)
+		{
+			if ((s->matSolTur_[0][d][u] != -1) && (s->matSolTur_[1][d][u] == -1)) {
+				s->vetSolZ_[offset3D(u, d, 0, inst->numDia__, inst->numPerDia__)] = 1;
+				printf("violacao z\n");
+			}
+			else
+				s->vetSolZ_[offset3D(u, d, 0, inst->numDia__, inst->numPerDia__)] = 0;
+			
+
+			if ((s->matSolTur_[inst->numPerDia__ - 1][d][u] != -1) && (s->matSolTur_[inst->numPerDia__ - 2][d][u] == -1)) {
+				s->vetSolZ_[offset3D(u, d, 1, inst->numDia__, inst->numPerDia__)] = 1;
+				printf("violacao z\n");
+			}
+			else 
+				s->vetSolZ_[offset3D(u, d, 1, inst->numDia__, inst->numPerDia__)] = 0;
+			
+
+			for (int p = 2; p < inst->numPerDia__; p++)
+				if ((s->matSolTur_[p - 1][d][u] != -1) && (s->matSolTur_[p - 2][d][u] == -1) && (s->matSolTur_[p][d][u] == -1)) {
+					s->vetSolZ_[offset3D(u, d, p, inst->numDia__, inst->numPerDia__)] = 1;
+					printf("violacao z\n");
+				}
+				else
+					s->vetSolZ_[offset3D(u, d, p, inst->numDia__, inst->numPerDia__)] = 0;
+		}
+	}
+
+	// Variáveis Y
+	int aux, pos;
+	for (int c = 0; c < inst->numDis__; c++)
+	{
+		aux = 0;
+		for (int r = 0; r < inst->numSal__; r++)
+		{
+			pos = 0;
+			for (int d = 0; d < inst->numDia__; d++)
+			{
+				for (int p = 0; p < inst->numPerDia__; p++)
+				{
+					if (s->matSolSal_[p][d][r] == c)
+					{
+						pos = 1;
+						break;
+					}
+				}
+				if (pos == 1) {
+					break;
+				}	
+			}
+			if (pos == 1) {
+				s->vetSolY_[offset2D(c, r, inst->numSal__)] = 1;
+				printf("violacao z\n");
+			}
+			else
+				s->vetSolY_[offset2D(c, r, inst->numSal__)] = 0;
+		}
+	}
+}
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+void imprimeZ(Solucao *sol, Instancia* inst) {
+
+	int pos = 0;
+	for (int u = 0; u < inst->numTur__; u++) {
+		for (int d = 0; d < inst->numDia__; d++) {
+			for (int s = 0; s < inst->numPerDia__; s++) {
+				printf("z_%d_%d_%d = %f\n", u, d, s, sol->vetSolZ_[pos]);
+				pos++;
+			}
+		}
+	}
+}
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+void imprimeY(Solucao *sol, Instancia* inst) {
+
+	int pos = 0;
+	for (int c = 0; c < inst->numDis__; c++) {
+		for (int r = 0; r < inst->numSal__; r++) {
+			printf("y_%d_%d = %f\n", r, c, sol->vetSolY_[pos]);
+			pos++;
+		}
+	}
 }
 //------------------------------------------------------------------------------
