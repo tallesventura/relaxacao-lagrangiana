@@ -357,6 +357,6 @@ void calculaFO(Solucao *sol, Instancia* inst) {
 
 	// TODO: calcular com o valor das variaveis
 
-	sol->funObj_ = PESOS[0] * sol->capSal_ + PESOS[1] * sol->janHor_ + PESOS[2] * sol->diaMin_ + PESOS[3] * sol->salDif_ -inst->numDis__;
+	
 }
 //------------------------------------------------------------------------------

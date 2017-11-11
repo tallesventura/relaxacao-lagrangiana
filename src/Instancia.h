@@ -6,6 +6,8 @@
 #include "Professor.h"
 #include "Sala.h"
 #include "Restricao.h"
+#include "ValoresLimites.h"
+#include "RestricoesModelo.h"
 
 //------------------------------------------------------------------------------
 typedef struct tInstancia {
@@ -26,6 +28,15 @@ typedef struct tInstancia {
 	Sala vetSalas__[MAX_SAL];
 	Restricao vetRestricoes__[MAX_RES];
 
+	double* vetCoefX;
+	double* vetCoefZ;
+	double* vetCoefQ;
+	double* vetCoefY;
+
+	RestJanHor *vetRestJanHor__; // Vetor com as restrições de janela horário
+	RestSalDif *vetRest14__; // Vetor com as restrições do tipo 14 (salas diferentes)
+	RestSalDif *vetRest15__; // Vetor com as restrições do tipo 15 (salas diferentes)
+
 	// ------------ Auxiliares
 	int matDisTur__[MAX_DIS][MAX_TUR]; // Dis x Cur; 1 se a disciplina d faz parte do currículo c; 0 caso contrário
 }Instancia;
@@ -34,5 +45,18 @@ typedef struct tInstancia {
 
 // MÉTODOS =====================================================================
 Instancia* lerInstancia(char *arq);
+void initCoefsFO(Instancia* inst);
+Instancia* clonarInstancia(Instancia* inst);
+void initVetCoefXFO(Instancia* inst);
+void montaCoefRestJanHor(Instancia* inst);
+void montaCoefRestSalDif(Instancia* inst);
+RestJanHor* getVetJanHor(Instancia* inst, int numRest);
+RestSalDif* getVetSalDif(Instancia *inst, int numRest);
+void initRestSalDif(RestSalDif *rest, Instancia* inst);
+void initRestJanHor(RestJanHor *rest, Instancia* inst);
+void montaVetCoefXFO(Instancia* inst, double* vetMultRes10, double* vetMultRes14, double* vetMultRes15);
+void montaVetCoefZFO(Instancia* inst, double* vetMultRes10);
+void montaVetCoefQFO(Instancia* inst);
+void montaVetCoefYFO(Instancia* inst, double* vetMultRes14, double* vetMultRes15);
 
 #endif // !InstanciaH

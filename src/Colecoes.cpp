@@ -25,3 +25,10 @@ double** getMat2DDouble(int numLin, int numCol, double initVal) {
 
 	return mat;
 }
+
+void initVetDouble(double* vet, int tam, double val) {
+
+	for (int i = 0; i < tam; i++) {
+		vet[i] = val;
+	}
+}
