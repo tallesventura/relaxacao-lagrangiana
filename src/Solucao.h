@@ -13,7 +13,7 @@ typedef struct tSolucao
 	int salDif_;    // número de violações à restrição desalas diferentes
 
 					// FO
-	int funObj_;    // valor da função objetivo
+	double funObj_;    // valor da função objetivo
 
 					// restrições HARD 
 	int vioNumAul_; // violações na restrição 1 - número de aulasA
@@ -62,4 +62,5 @@ void montaSolucao(Solucao *s, Instancia* inst);
 void viabilizaSol(Solucao *s, Instancia* inst);
 void imprimeZ(Solucao *sol, Instancia* inst);
 void imprimeY(Solucao *sol, Instancia* inst);
+void calculaFO(Solucao *sol, Instancia* inst);
 #endif // Solucao

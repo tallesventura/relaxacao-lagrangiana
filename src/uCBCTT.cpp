@@ -25,8 +25,8 @@ RestSalDif *vetRest14__; // Vetor com as restrições do tipo 14 (salas diferentes
 RestSalDif *vetRest15__; // Vetor com as restrições do tipo 15 (salas diferentes)
 int coefMatXFO[MAX_PER * MAX_DIA][MAX_SAL][MAX_DIS]; // Matriz de coeficientes das variáveis x da FO.
 
-//char INST[50] = "comp";
-char INST[50] = "toy";
+char INST[50] = "comp";
+//char INST[50] = "toy";
 
 //==============================================================================
 
@@ -36,7 +36,7 @@ int main(int argc, char *argv[])
 {
 	char nomeInst[10];
 	strcpy_s(nomeInst, INST);
-	//strcat_s(nomeInst, "05");
+	strcat_s(nomeInst, "01");
 
 	execUma(nomeInst);
 	//execTodas();
@@ -231,6 +231,7 @@ Solucao* execCpx(char *arq, Instancia* inst)
 
 	// Inicializando as matrizes de solucao
 	montaSolucao(s, inst);
+	printf("\nFO antes de viabilizar: %f\n", s->funObj_);
 
 	/*int pos = 0;
 	printf("\n");
@@ -288,6 +289,7 @@ Solucao* execCpx(char *arq, Instancia* inst)
 
 	printf("Depois da viabilizacao\n");
 	viabilizaSol(s, inst);
+	calculaFO(s, inst);
 	s->vetViabJanHor_ = (double*)malloc(inst->numTur__*inst->numDia__*inst->numPerDia__ * sizeof(double));
 	viavel = getVetViabJanHor(s, inst);
 	if (viavel) {
