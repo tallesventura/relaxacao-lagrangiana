@@ -28,10 +28,10 @@ typedef struct tInstancia {
 	Sala vetSalas__[MAX_SAL];
 	Restricao vetRestricoes__[MAX_RES];
 
-	double* vetCoefX;
-	double* vetCoefZ;
-	double* vetCoefQ;
-	double* vetCoefY;
+	double* vetCoefX; //Já tem os pesos
+	double* vetCoefZ; //Já tem os pesos
+	double* vetCoefQ; //Já tem os pesos
+	double* vetCoefY; //Já tem os pesos
 
 	RestJanHor *vetRestJanHor__; // Vetor com as restrições de janela horário
 	RestSalDif *vetRest14__; // Vetor com as restrições do tipo 14 (salas diferentes)
@@ -58,5 +58,6 @@ void montaVetCoefXFO(Instancia* inst, double* vetMultRes10, double* vetMultRes14
 void montaVetCoefZFO(Instancia* inst, double* vetMultRes10);
 void montaVetCoefQFO(Instancia* inst);
 void montaVetCoefYFO(Instancia* inst, double* vetMultRes14, double* vetMultRes15);
+void montaVetCoefsFO(Instancia* inst, double* vetMultRes10, double* vetMultRes14, double* vetMultRes15);
 
 #endif // !InstanciaH

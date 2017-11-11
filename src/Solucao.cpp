@@ -1,10 +1,10 @@
 
+#include "Solucao.h"
+#include "Colecoes.h"
+
 #include<stdlib.h>
 #include <conio.h>
 #include<stdio.h>
-
-#include "Solucao.h"
-#include "Colecoes.h"
 
 //------------------------------------------------------------------------------
 void escreverSol(Solucao* s, char *arq, Instancia* inst)
@@ -63,7 +63,7 @@ void escreverSol(Solucao* s, char *arq, Instancia* inst)
 	// verificar a solucao
 	
 	fprintf(f, "\n\n>>> RESULTADOS CALCULADOS\n\n", s->valSol_);
-	fprintf(f, "Func. obj.....: %d\n", s->funObj_);
+	fprintf(f, "Func. obj.....: %f\n", s->funObj_);
 	fprintf(f, "\n\nHARD----------------------------------\n\n");
 	fprintf(f, "Num. aulas....: %d\n", s->vioNumAul_);
 	fprintf(f, "Aulas simul...: %d\n", s->vioAulSim_);
@@ -355,8 +355,32 @@ void imprimeY(Solucao *sol, Instancia* inst) {
 //------------------------------------------------------------------------------
 void calculaFO(Solucao *sol, Instancia* inst) {
 
-	// TODO: calcular com o valor das variaveis
+	double somaX, somaZ, somaQ, somaY, val;
+	somaX = somaZ = somaQ = somaY = 0;
+	val = inst->numDis__ * PESOS[3];
 
+	int numX = inst->numPerTot__*inst->numSal__*inst->numDis__;
+	int numZ = inst->numTur__*inst->numDia__*inst->numPerDia__;
+	int numQ = inst->numDis__;
+	int numY = inst->numSal__*inst->numDis__;
 	
+
+	for (int i = 0; i < numX; i++) {
+		somaX += inst->vetCoefX[i] * sol->vetSol_[i];
+	}
+
+	for (int i = 0; i < numZ; i++) {
+		somaZ += inst->vetCoefZ[i] * sol->vetSolZ_[i];
+	}
+
+	for (int i = 0; i < numQ; i++) {
+		somaQ += inst->vetCoefQ[i] * sol->vetSolQ_[i];
+	}
+
+	for (int i = 0; i < numY; i++) {
+		somaY += inst->vetCoefY[i] * sol->vetSolY_[i];
+	}
+
+	sol->funObj_ = somaX + somaZ + somaQ + somaY - val;
 }
 //------------------------------------------------------------------------------

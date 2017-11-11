@@ -22,6 +22,7 @@ Solucao* execCpx(char *arq, Instancia* inst);
 
 void execUma(char* nomeInst);
 void execTodas();
+void montarModeloPLI(char *arq, Instancia* inst);
 void montarModeloRelaxado(char *arq, Instancia* inst, double* vetAlpha, double* vetMultRes14, double* vetMultRes15);
 void initMultiplicadores(double* vetMult, int tam, double val);
 int getVetViabJanHor(Solucao* sol, Instancia* inst);

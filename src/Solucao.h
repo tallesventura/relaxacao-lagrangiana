@@ -51,8 +51,7 @@ typedef struct tSolucao
 	// matriz de solução (período x dia x turma)
 	int matSolTur_[MAX_PER][MAX_DIA][MAX_TUR];
 }Solucao;
-//
-//
+
 //// MÉTODOS ===================================================================================
 
 void escreverSol(Solucao* s, char *arq, Instancia* inst);

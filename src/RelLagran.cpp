@@ -5,7 +5,7 @@
 #include <math.h>
 
  // coefs originais da FO, 
-Solucao* execRelLagran(char* arq, double* vetAlpha, int tamAlpha, Instancia* inst, RestJanHor *vetRestJanHor, int coefMatXFO[MAX_PER * MAX_DIA][MAX_SAL][MAX_DIS]) {
+Solucao* execRelLagran(char* arq, Instancia* inst, double* vetMultRes10, double* vetMultRes14, double* vetMultRes15) {
 
 	Solucao *solRel, *bestSol;
 	double lb = -INFINITY;

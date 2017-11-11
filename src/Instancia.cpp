@@ -83,7 +83,7 @@ Instancia* lerInstancia(char *arq)
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-void initCoefs(Instancia* inst) {
+void initCoefsFO(Instancia* inst) {
 
 	int numX = MAX_PER * MAX_SAL * MAX_DIS;
 	int numZ = MAX_TUR * MAX_DIA * MAX_PER;
@@ -427,5 +427,16 @@ void montaVetCoefYFO(Instancia* inst, double* vetMultRes14, double* vetMultRes15
 			inst->vetCoefY[posY] = (PESOS[3] * inst->vetCoefY[posY]) + somaR14 + somaR15;
 		}
 	}
+}
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+void montaVetCoefsFO(Instancia* inst, double* vetMultRes10, double* vetMultRes14, double* vetMultRes15) {
+
+	montaVetCoefXFO(inst, vetMultRes10, vetMultRes14, vetMultRes15);
+	montaVetCoefZFO(inst, vetMultRes10);
+	montaVetCoefQFO(inst);
+	montaVetCoefYFO(inst, vetMultRes14, vetMultRes15);
+
 }
 //------------------------------------------------------------------------------

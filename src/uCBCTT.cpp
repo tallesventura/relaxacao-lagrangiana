@@ -1,15 +1,15 @@
 #include "uCBCTT.h"
+#include "Colecoes.h"
+#include "RelLagran.h"
+#include "Solucao.h"
+#include "ValoresLimites.h"
+//#include "..\lib\cplex\include\cplex.h"
 
 #include <stdio.h>
 #include <string.h>
 #include <conio.h>
 #include <time.h>
 
-//#include "..\lib\cplex\include\cplex.h"
-#include "Colecoes.h"
-#include "RelLagran.h"
-#include "Solucao.h"
-#include "ValoresLimites.h"
 
 #define RES_SOFT
 #define RES_CAP_SAL // Restrição soft de capacidade das salas
@@ -20,13 +20,10 @@
 #define RELAXAR
 //#define ESCREVE_CSV
 
- // Matriz de coeficientes das variáveis x da FO.
-
 char INST[50] = "comp";
 //char INST[50] = "toy";
 
 //==============================================================================
-
 
 //------------------------------------------------------------------------------
 int main(int argc, char *argv[])
@@ -78,6 +75,8 @@ void execUma(char* nomeInst) {
 	int numRest14 = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
 	int numRest15 = inst->numSal__*inst->numDis__;
 
+	initCoefsFO(inst);
+
 	printf("Inicializando os vetores de restricoes 10\n");
 	inst->vetRestJanHor__ =  getVetJanHor(inst, numRest10);
 	printf("Inicializando os vetores de restricoes 14\n");
@@ -100,6 +99,8 @@ void execUma(char* nomeInst) {
 	initMultiplicadores(vetMultRes14, numRest14, VAL_INIT_RES_14);
 	printf("Inicializando vetor de multiplicadores das restricoes 15\n");
 	initMultiplicadores(vetMultRes15, numRest15, VAL_INIT_RES_15);
+
+	montaVetCoefsFO(inst, vetMultRes10, vetMultRes14, vetMultRes15);
 
 	printf("Montando o modelo relaxado\n");
 	montarModeloRelaxado(aux,inst, vetMultRes10, vetMultRes14, vetMultRes15);
@@ -229,14 +230,6 @@ Solucao* execCpx(char *arq, Instancia* inst)
 	montaSolucao(s, inst);
 	printf("\nFO antes de viabilizar: %f\n", s->funObj_);
 
-	/*int pos = 0;
-	printf("\n");
-	for (int c = 0; c < inst->numDis__; c++) {
-		printf("q_%d = %.2f\n", c, s->vetSolQ_[c]);
-	}
-	printf("\n");*/
-
-
 	// ----------------------------------------------------------------------------------
 	printf("Antes da viabilizacao\n");
 	s->vetViabJanHor_ = (double*)malloc(inst->numTur__*inst->numDia__*inst->numPerDia__ * sizeof(double));
@@ -278,14 +271,13 @@ Solucao* execCpx(char *arq, Instancia* inst)
 			printf("RES_%d: %.2f\n", i, vetViab15[i]);
 		}*/
 	}
-	//imprimeZ(s, inst);
-	//imprimeY(s, inst);
 	printf("\n");
 	// ----------------------------------------------------------------------------------
 
-	printf("Depois da viabilizacao\n");
+	printf("Depois da viabilizacao\n"); 
 	viabilizaSol(s, inst);
 	calculaFO(s, inst);
+	printf("\nFO depois de viabilizar: %f\n", s->funObj_);
 	s->vetViabJanHor_ = (double*)malloc(inst->numTur__*inst->numDia__*inst->numPerDia__ * sizeof(double));
 	viavel = getVetViabJanHor(s, inst);
 	if (viavel) {
@@ -639,37 +631,23 @@ void montarModeloRelaxado(char *arq, Instancia* inst, double* vetAlpha, double* 
 
 	FILE *f = fopen(arq, "w");
 
+	double coef;
 	int numRestJanHor = inst->numTur__*inst->numDia__*inst->numPerDia__;
 	int numRest14 = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
 	int numRest15 = inst->numSal__ * inst->numDis__;
 	// ------------------ FO
 	fprintf(f, "MIN\n");
 
+	fprintf(f, "\n\n\\Capacidade de Salas\n");
+	int posX;
 	for (int r = 0; r < inst->numSal__; r++)
 	{
 		for (int p = 0; p < inst->numPerTot__; p++)
 		{
 			for (int c = 0; c < inst->numDis__; c++) {
 				
-				// Coeficientes de x das restrições do tipo 10 (Janela de horário) 
-				double somaR10 = 0;
-				for (int i = 0; i < numRestJanHor; i++) {
-					somaR10 -= inst->vetRestJanHor__[i].coefMatX[offset3D(r, p, c, inst->numPerTot__, inst->numDis__)] * vetAlpha[i];
-				}
-
-				// Coeficientes de x das restrições do tipo 14 (Salas diferentes) 
-				double somaR14 = 0;
-				for (int i = 0; i < numRest14; i++) {
-					somaR14 -= inst->vetRest14__[i].coefMatX[offset3D(r, p, c, inst->numPerTot__, inst->numDis__)] * vetMultRes14[i];
-				}
-
-				// Coeficientes de x das restrições do tipo 15 (Salas diferentes) 
-				double somaR15 = 0;
-				for (int i = 0; i < numRest15; i++) {
-					somaR15 -= inst->vetRest15__[i].coefMatX[offset3D(r, p, c, inst->numPerTot__, inst->numDis__)] * vetMultRes15[i];
-				}
-
-				double coef = (PESOS[0] * coefMatXFO[p][r][c]) + somaR10 + somaR14 + somaR15;
+				posX = offset3D(r, p, c, inst->numPerTot__, inst->numDis__);
+				coef = inst->vetCoefX[posX];
 				
 				if (coef < 0)
 					fprintf(f, "%f x_%d_%d_%d ", coef, p, r, c);
@@ -681,18 +659,15 @@ void montarModeloRelaxado(char *arq, Instancia* inst, double* vetAlpha, double* 
 	}
 
 	fprintf(f, "\n\n\\Janelas de horários\n");
+	int posZ;
 	for (int u = 0; u < inst->numTur__; u++)
 	{
 		for (int d = 0; d < inst->numDia__; d++)
 		{
 			for (int s = 0; s < inst->numPerDia__; s++) {
 
-				// Coeficientes de z das restrições do tipo 10 (Janela de horário) 
-				double somaR10 = 0;
-				for (int i = 0; i < numRestJanHor; i++) {
-					somaR10 -= inst->vetRestJanHor__[i].coefMatZ[offset3D(u, d, s, inst->numDia__, inst->numPerDia__)] * vetAlpha[i];
-				}
-				double coef = PESOS[1] + somaR10;
+				posZ = offset3D(u, d, s, inst->numDia__, inst->numPerDia__);
+				coef = inst->vetCoefZ[posZ];
 
 				if (coef < 0)
 					fprintf(f, "%f z_%d_%d_%d ", coef, u, d, s);
@@ -704,27 +679,21 @@ void montarModeloRelaxado(char *arq, Instancia* inst, double* vetAlpha, double* 
 	}
 
 	fprintf(f, "\n\\Dias mínimos\n");
-	for (int c = 0; c < inst->numDis__; c++)
-		fprintf(f, "+ %d q_%d ", PESOS[2], c);
+	for (int c = 0; c < inst->numDis__; c++) {
+
+		coef = inst->vetCoefQ[c];
+		fprintf(f, "+ %f q_%d ", coef, c);
+	}
+		
 
 	fprintf(f, "\n\n\\Salas diferentes\n");
+	int posY;
 	for (int c = 0; c < inst->numDis__; c++)
 	{
 		for (int r = 0; r < inst->numSal__; r++) {
-			
-			// Coeficientes de y das restrições do tipo 14 (Salas diferentes)
-			double somaR14 = 0;
-			for (int i = 0; i < numRest14; i++) {
-				somaR14 -= inst->vetRest14__[i].coefMatY[offset2D(c, r, inst->numSal__)] * vetMultRes14[i];
-			}
 
-			// Coeficientes de y das restrições do tipo 15 (Salas diferentes)
-			double somaR15 = 0;
-			for (int i = 0; i < numRest15; i++) {
-				somaR14 -= inst->vetRest15__[i].coefMatY[offset2D(c, r, inst->numSal__)] * vetMultRes15[i];
-			}
-
-			double coef = PESOS[3] + somaR14 + somaR15;
+			posY = offset2D(c, r, inst->numSal__);
+			coef = inst->vetCoefY[posY];
 
 			if (coef < 0)
 				fprintf(f, "%f y_%d_%d ", coef, r, c);
@@ -960,273 +929,6 @@ void montarModeloRelaxado(char *arq, Instancia* inst, double* vetAlpha, double* 
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-void montarModeloRelaxadoMemoria(CPXCENVptr* env, CPXLPptr* lp, Instancia* inst, double* vetAlpha, double* vetMultRes14, double* vetMultRes15) {
-
-	// VARIÁVEIS C -------------------------------------------------------
-	int ccnt = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
-	double *obj    = (double*) malloc(ccnt * sizeof(double));
-	double *lb     = (double*) malloc(ccnt * sizeof(double));
-	double *ub     = (double*) malloc(ccnt * sizeof(double));
-	char* xctype   = (char*)   malloc(ccnt * sizeof(char));
-	char** colname = (char**)  malloc(ccnt * sizeof(char*));
-
-	int pos = 0;
-	int numRestJanHor = inst->numTur__*inst->numDia__*inst->numPerDia__;
-	int numRest14 = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
-	int numRest15 = inst->numSal__ * inst->numDis__;
-
-	for (int r = 0; r < inst->numSal__; r++) {
-		for (int p = 0; p < inst->numPerTot__; p++) {
-			for (int c = 0; c < inst->numDis__; c++) {
-				lb[pos] = 0;
-				ub[pos] = 1;
-				xctype[pos] = 'B';
-				colname[pos] = (char*)malloc(10 * sizeof(char));
-				char aux[3];
-				strcat(colname[pos], "x_");
-				strcat(colname[pos], itoa(p,aux,10));
-				strcat(colname[pos], "_");
-				strcat(colname[pos], itoa(r, aux, 10));
-				strcat(colname[pos], "_");
-				strcat(colname[pos], itoa(c, aux, 10));
-				
-				// Coeficientes de x das restrições do tipo 10 (Janela de horário) 
-				double somaR10 = 0;
-				for (int i = 0; i < numRestJanHor; i++) {
-					somaR10 -= inst->vetRestJanHor__[i].coefMatX[offset3D(r, p, c, inst->numPerTot__, inst->numDis__)] * vetAlpha[i];
-				}
-
-				// Coeficientes de x das restrições do tipo 14 (Salas diferentes) 
-				double somaR14 = 0;
-				for (int i = 0; i < numRest14; i++) {
-					somaR14 -= inst->vetRest14__[i].coefMatX[offset3D(r, p, c, inst->numPerTot__, inst->numDis__)] * vetMultRes14[i];
-				}
-
-				// Coeficientes de x das restrições do tipo 15 (Salas diferentes) 
-				double somaR15 = 0;
-				for (int i = 0; i < numRest15; i++) {
-					somaR15 -= inst->vetRest15__[i].coefMatX[offset3D(r, p, c, inst->numPerTot__, inst->numDis__)] * vetMultRes15[i];
-				}
-
-				obj[pos] = (PESOS[0] * inst->coefMatXFO[p][r][c]) + somaR10 + somaR14 + somaR15;
-
-				pos++;
-			}
-		}
-	}
-
-	CPXnewcols(*env, *lp, ccnt, obj, lb, ub, xctype, colname);
-	// -------------------------------------------------------------------
-
-	// VARIÁVEIS Z -------------------------------------------------------
-	ccnt = inst->numTur__*inst->numDia__*inst->numPerDia__;
-	obj = (double*)malloc(ccnt * sizeof(double));
-	lb = (double*)malloc(ccnt * sizeof(double));
-	ub = (double*)malloc(ccnt * sizeof(double));
-	xctype = (char*)malloc(ccnt * sizeof(char));
-	colname = (char**)malloc(ccnt * sizeof(char*));
-
-	pos = 0;
-	for (int u = 0; u < inst->numTur__; u++)
-	{
-		for (int d = 0; d < inst->numDia__; d++)
-		{
-			for (int s = 0; s < inst->numPerDia__; s++) {
-
-				lb[pos] = 0;
-				ub[pos] = 1;
-				xctype[pos] = 'B';
-				colname[pos] = (char*)malloc(10 * sizeof(char));
-				char aux[3];
-				strcat(colname[pos], "z_");
-				strcat(colname[pos], itoa(u, aux, 10));
-				strcat(colname[pos], "_");
-				strcat(colname[pos], itoa(d, aux, 10));
-				strcat(colname[pos], "_");
-				strcat(colname[pos], itoa(s, aux, 10));
-
-				// Coeficientes de z das restrições do tipo 10 (Janela de horário) 
-				double somaR10 = 0;
-				for (int i = 0; i < numRestJanHor; i++) {
-					somaR10 -= vetRestJanHor__[i].coefMatZ[offset3D(u, d, s, inst->numDia__, inst->numPerDia__)] * vetAlpha[i];
-				}
-				obj[pos] = PESOS[1] + somaR10;
-
-				pos++;
-			}
-		}
-	}
-
-	CPXnewcols(*env, *lp, ccnt, obj, lb, ub, xctype, colname);
-	// -------------------------------------------------------------------
-
-	// VARIÁVEIS Q -------------------------------------------------------
-	ccnt = inst->numDis__;
-	obj = (double*)malloc(ccnt * sizeof(double));
-	lb = (double*)malloc(ccnt * sizeof(double));
-	ub = (double*)malloc(ccnt * sizeof(double));
-	xctype = (char*)malloc(ccnt * sizeof(char));
-	colname = (char**)malloc(ccnt * sizeof(char*));
-
-	pos = 0;
-	for (int c = 0; c < inst->numDis__; c++) {
-		lb[pos] = 0;
-		ub[pos] = inst->numDia__;
-		xctype[pos] = 'I';
-		colname[pos] = (char*)malloc(10 * sizeof(char));
-		char aux[3];
-		strcat(colname[pos], "q_");
-		strcat(colname[pos], itoa(c, aux, 10));
-		obj[pos] = PESOS[2];
-		
-		pos++;
-	}
-		
-	CPXnewcols(*env, *lp, ccnt, obj, lb, ub, xctype, colname);
-	// -------------------------------------------------------------------
-
-	// VARIÁVEIS Y -------------------------------------------------------
-	ccnt = inst->numSal__ * inst->numDis__;
-	obj = (double*)malloc(ccnt * sizeof(double));
-	lb = (double*)malloc(ccnt * sizeof(double));
-	ub = (double*)malloc(ccnt * sizeof(double));
-	xctype = (char*)malloc(ccnt * sizeof(char));
-	colname = (char**)malloc(ccnt * sizeof(char*));
-
-	pos = 0;
-
-	for (int c = 0; c < inst->numDis__; c++)
-	{
-		for (int r = 0; r < inst->numSal__; r++) {
-
-			lb[pos] = 0;
-			ub[pos] = 1;
-			xctype[pos] = 'B';
-			colname[pos] = (char*)malloc(10 * sizeof(char));
-			char aux[3];
-			strcat(colname[pos], "y_");
-			strcat(colname[pos], itoa(r, aux, 10));
-			strcat(colname[pos], "_");
-			strcat(colname[pos], itoa(c, aux, 10));
-
-			// Coeficientes de y das restrições do tipo 14 (Salas diferentes)
-			double somaR14 = 0;
-			for (int i = 0; i < numRest14; i++) {
-				somaR14 -= vetRest14__[i].coefMatY[offset2D(c, r, inst->numSal__)] * vetMultRes14[i];
-			}
-
-			// Coeficientes de y das restrições do tipo 15 (Salas diferentes)
-			double somaR15 = 0;
-			for (int i = 0; i < numRest15; i++) {
-				somaR14 -= vetRest15__[i].coefMatY[offset2D(c, r, inst->numSal__)] * vetMultRes15[i];
-			}
-
-			obj[pos] = PESOS[3] + somaR14 + somaR15;
-
-			pos++;
-		}
-	}
-
-	CPXnewcols(*env, *lp, ccnt, obj, lb, ub, xctype, colname);
-	// -------------------------------------------------------------------
-
-	// VARIÁVEL VAL ------------------------------------------------------
-	ccnt = 1;
-	obj = (double*)malloc(ccnt * sizeof(double));
-	lb = (double*)malloc(ccnt * sizeof(double));
-	ub = (double*)malloc(ccnt * sizeof(double));
-	xctype = (char*)malloc(ccnt * sizeof(char));
-	colname = (char**)malloc(ccnt * sizeof(char*));
-
-	pos = 0;
-
-	xctype[pos] = 'I';
-	colname[pos] = "val";
-	char aux[3];
-	obj[pos] = inst->numDis__;
-
-	CPXnewcols(*env, *lp, ccnt, obj, NULL, NULL, xctype, colname);
-	// -------------------------------------------------------------------
-
-	// VARIÁVEIS V -------------------------------------------------------
-	ccnt = inst->numDia__ * inst->numDis__;
-	lb = (double*)malloc(ccnt * sizeof(double));
-	ub = (double*)malloc(ccnt * sizeof(double));
-	xctype = (char*)malloc(ccnt * sizeof(char));
-	colname = (char**)malloc(ccnt * sizeof(char*));
-
-	pos = 0;
-	for (int c = 0; c < inst->numDis__; c++) {
-		for (int d = 0; d < inst->numDia__; d++) {
-
-			lb[pos] = 0;
-			ub[pos] = 1;
-			xctype[pos] = 'B';
-			colname[pos] = (char*)malloc(10 * sizeof(char));
-			char aux[3];
-			strcat(colname[pos], "v_");
-			strcat(colname[pos], itoa(d, aux, 10));
-			strcat(colname[pos], "_");
-			strcat(colname[pos], itoa(c, aux, 10));
-			pos++;
-		}
-	}
-
-	CPXnewcols(*env, *lp, ccnt, NULL, lb, ub, xctype, colname);
-	// -------------------------------------------------------------------
-
-	//Implementar as restricoes
-	// VAL
-
-	int numX = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
-	int numZ = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
-	int numQ = inst->numDis__;
-	int numVal = 1;
-	int numY = inst->numSal__ * inst->numDis__;
-	int numV = inst->numDia__ * inst->numDis__;
-	int numVarTot = numX + numZ + numQ + numY + numVal + numV;
-
-	// R1
-	int rcnt = inst->numDis__;
-	int nzcnt = 0;
-	double** matCoef = getMat2DDouble(rcnt, numVarTot, 0);
-	double* rhs = (double*)malloc(rcnt * sizeof(double));
-
-	for (int c = 0; c < inst->numDis__; c++)
-	{
-		for (int p = 0; p < inst->numPerTot__; p++) {
-			for (int r = 0; r < inst->numSal__; r++) {
-				matCoef[c][offset3D(r, p, c, inst->numPerTot__, inst->numDis__)] = 1;
-				nzcnt++;
-			}	
-		}	
-		rhs[c] = inst->vetDisciplinas__[c].numPer_;
-	}
-
-	double *matind = (double*)malloc(nzcnt * sizeof(double));
-	double *matval = (double*)malloc(nzcnt * sizeof(double));
-
-	pos = 0;
-	for (int c = 0; c < inst->numDis__; c++)
-	{
-		for (int p = 0; p < inst->numPerTot__; p++) {
-			for (int r = 0; r < inst->numSal__; r++) {
-				int col = offset3D(r, p, c, inst->numPerTot__, inst->numDis__);
-				double coef = matCoef[c][col];
-				if (coef != 0) {
-					matval[pos] = coef;
-					matind[pos] = col;
-					pos++;
-				}
-
-				
-			}
-		}
-	}
-}
-//------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
 int getVetViabJanHor(Solucao* sol, Instancia* inst) {
 
 	int viavel = 1;
@@ -1246,7 +948,7 @@ int getVetViabJanHor(Solucao* sol, Instancia* inst) {
 						soma += sol->vetSol_[offset3D(r, prim , c, inst->numPerTot__, inst->numDis__)] - sol->vetSol_[offset3D(r, seg, c, inst->numPerTot__, inst->numDis__)];
 					}
 				}
-			int z = sol->vetSolZ_[offset3D(u, d, 0, inst->numDia__, inst->numPerDia__)];
+			double z = sol->vetSolZ_[offset3D(u, d, 0, inst->numDia__, inst->numPerDia__)];
 			sol->vetViabJanHor_[pos] = soma <= z ? 0 : soma - z;
 			if (sol->vetViabJanHor_[pos] != 0) {
 				viavel = 0;
@@ -1271,7 +973,7 @@ int getVetViabJanHor(Solucao* sol, Instancia* inst) {
 						soma += sol->vetSol_[offset3D(r, prim, c, inst->numPerTot__, inst->numDis__)] - sol->vetSol_[offset3D(r, seg, c, inst->numPerTot__, inst->numDis__)];
 					}
 				}
-			int z = sol->vetSolZ_[offset3D(u, d, 1, inst->numDia__, inst->numPerDia__)];
+			double z = sol->vetSolZ_[offset3D(u, d, 1, inst->numDia__, inst->numPerDia__)];
 			sol->vetViabJanHor_[pos] = soma <= z ? 0 : soma - z;
 			if (sol->vetViabJanHor_[pos] != 0) {
 				viavel = 0;
@@ -1300,7 +1002,7 @@ int getVetViabJanHor(Solucao* sol, Instancia* inst) {
 								sol->vetSol_[offset3D(r, ter, c, inst->numPerTot__, inst->numDis__)];
 						}
 					}
-				int z = sol->vetSolZ_[offset3D(u, d, s, inst->numDia__, inst->numPerDia__)];
+				double z = sol->vetSolZ_[offset3D(u, d, s, inst->numDia__, inst->numPerDia__)];
 				sol->vetViabJanHor_[pos] = soma <= z ? 0 : soma - z;
 				if (sol->vetViabJanHor_[pos] != 0) {
 					viavel = 0;
