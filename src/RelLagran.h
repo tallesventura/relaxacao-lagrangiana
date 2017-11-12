@@ -18,5 +18,11 @@
 // MÉTODOS ===================================================================================
 
 Solucao* execRelLagran(char* arq, Instancia* inst, double* vetMultRes10, double* vetMultRes14, double* vetMultRes15);
+void getSubGradRest10(Solucao* sol, Instancia* inst, double* vetSubGrad);
+void getSubGradRest14(Solucao* sol, Instancia* inst, double* vetSubGrad);
+void getSubGradRest15(Solucao* sol, Instancia* inst, double* vetSubGrad);
+double calculaPasso(double eta, double lb, double ub, double* vetSubGrad, int tamVet);
+void atualizaMultMenIg(double* vetMult, double passo, double* subGrad, int tamVet);
+void atualizaMultMaiIg(double* vetMult, double passo, double* subGrad, int tamVet);
 
 #endif // RelLagran
