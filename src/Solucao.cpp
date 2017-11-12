@@ -5,6 +5,7 @@
 #include<stdlib.h>
 #include <conio.h>
 #include<stdio.h>
+#include<string.h>
 
 //------------------------------------------------------------------------------
 void escreverSol(Solucao* s, char *arq, Instancia* inst)
@@ -382,5 +383,61 @@ void calculaFO(Solucao *sol, Instancia* inst) {
 	}
 
 	sol->funObj_ = somaX + somaZ + somaQ + somaY - val;
+}
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+Solucao* clonarSolucao(Solucao *sol, Instancia* inst) {
+
+	Solucao *clone = (Solucao*)malloc(sizeof(Solucao));
+
+	clone->capSal_ = sol->capSal_;
+	clone->janHor_ = sol->janHor_;
+	clone->diaMin_ = sol->diaMin_;
+	clone->salDif_ = sol->salDif_;
+
+	clone->funObj_ = sol->funObj_;
+
+	clone->vioNumAul_ = sol->vioNumAul_;
+	clone->vioAulSim_ = sol->vioAulSim_;
+	clone->vioDisSim_ = sol->vioDisSim_;
+	clone->vioProSim_ = sol->vioProSim_;
+	clone->vioTurSim_ = sol->vioTurSim_;
+
+	clone->numVar_ = sol->numVar_;
+	clone->numRes_ = sol->numRes_;
+
+	clone->vetViab_ = (double*) malloc(sol->numRes_ * sizeof(double));
+	memcpy(clone->vetViab_, sol->vetViab_, sol->numRes_ * sizeof(double));
+
+	clone->valSol_ = sol->valSol_;
+	clone->bstNod_ = sol->bstNod_;
+	clone->tempo_ = sol->tempo_;
+
+	int numRestJanHor = inst->numTur__*inst->numDia__*inst->numPerDia__;
+	int numRest14 = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
+	int numRest15 = inst->numSal__ * inst->numDis__;
+	memcpy(clone->vetViabJanHor_, sol->vetViabJanHor_, numRestJanHor * sizeof(double));
+	memcpy(clone->vetViab14_, sol->vetViab14_, numRest14 * sizeof(double));
+	memcpy(clone->vetViab15_, sol->vetViab15_, numRest15 * sizeof(double));
+
+	int numX = MAX_PER*MAX_DIA*MAX_SAL*MAX_DIS;
+	int numZ = MAX_TUR*MAX_DIA*MAX_PER;
+	int numQ = MAX_DIS;
+	int numY = MAX_DIS*MAX_SAL;
+	int numV = MAX_DIS*MAX_DIA;
+	memcpy(clone->vetSol_, sol->vetSol_, numX * sizeof(double));
+	memcpy(clone->vetSolZ_, sol->vetSolZ_, numZ * sizeof(double));
+	memcpy(clone->vetSolQ_, sol->vetSolQ_, numQ * sizeof(double));
+	memcpy(clone->vetSolY_, sol->vetSolY_, numY * sizeof(double));
+	memcpy(clone->vetSolV_, sol->vetSolV_, numV * sizeof(double));
+
+	int tamSolSal = MAX_PER * MAX_DIA * MAX_SAL;
+	memcpy(clone->matSolSal_, sol->matSolSal_, tamSolSal * sizeof(int));
+
+	int tamSolTur = MAX_PER * MAX_DIA * MAX_TUR;
+	memcpy(clone->matSolTur_, sol->matSolTur_, tamSolTur * sizeof(int));
+
+	return clone;
 }
 //------------------------------------------------------------------------------
