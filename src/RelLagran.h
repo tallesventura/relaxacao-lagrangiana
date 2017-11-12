@@ -18,6 +18,7 @@
 // MÉTODOS ===================================================================================
 
 Solucao* execRelLagran(char* arq, Instancia* inst, double* vetMultRes10, double* vetMultRes14, double* vetMultRes15);
+void relaxarModelo(char *arq, Instancia* inst, double* vetMultRes10, double* vetMultRes14, double* vetMultRes15);
 void getSubGradRest10(Solucao* sol, Instancia* inst, double* vetSubGrad);
 void getSubGradRest14(Solucao* sol, Instancia* inst, double* vetSubGrad);
 void getSubGradRest15(Solucao* sol, Instancia* inst, double* vetSubGrad);

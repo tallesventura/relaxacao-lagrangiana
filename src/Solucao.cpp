@@ -261,7 +261,6 @@ void montaSolucao(Solucao *s, Instancia* inst) {
 //------------------------------------------------------------------------------
 void viabilizaSol(Solucao *s, Instancia* inst) {
 	
-	printf("Entrou viabilizacao\n");
 	// Variáveis Z
 	for (int u = 0; u < inst->numTur__; u++)
 	{
@@ -389,7 +388,7 @@ void calculaFO(Solucao *sol, Instancia* inst) {
 //------------------------------------------------------------------------------
 Solucao* clonarSolucao(Solucao *sol, Instancia* inst) {
 
-	Solucao *clone = (Solucao*)malloc(sizeof(Solucao));
+	Solucao *clone = (Solucao*) malloc(sizeof(Solucao));
 
 	clone->capSal_ = sol->capSal_;
 	clone->janHor_ = sol->janHor_;
@@ -407,25 +406,33 @@ Solucao* clonarSolucao(Solucao *sol, Instancia* inst) {
 	clone->numVar_ = sol->numVar_;
 	clone->numRes_ = sol->numRes_;
 
-	clone->vetViab_ = (double*) malloc(sol->numRes_ * sizeof(double));
-	memcpy(clone->vetViab_, sol->vetViab_, sol->numRes_ * sizeof(double));
+	//clone->vetViab_ = (double*) malloc(sol->numRes_ * sizeof(double));
+	//memcpy(clone->vetViab_, sol->vetViab_, sol->numRes_ * sizeof(double));
 
 	clone->valSol_ = sol->valSol_;
 	clone->bstNod_ = sol->bstNod_;
 	clone->tempo_ = sol->tempo_;
 
-	int numRestJanHor = inst->numTur__*inst->numDia__*inst->numPerDia__;
+	/*int numRestJanHor = inst->numTur__*inst->numDia__*inst->numPerDia__;
 	int numRest14 = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
 	int numRest15 = inst->numSal__ * inst->numDis__;
+	clone->vetViabJanHor_ = (double*) malloc(numRestJanHor * sizeof(double));
+	clone->vetViab14_ = (double*)malloc(numRest14 * sizeof(double));
+	clone->vetViab15_ = (double*)malloc(numRest15 * sizeof(double));
 	memcpy(clone->vetViabJanHor_, sol->vetViabJanHor_, numRestJanHor * sizeof(double));
 	memcpy(clone->vetViab14_, sol->vetViab14_, numRest14 * sizeof(double));
-	memcpy(clone->vetViab15_, sol->vetViab15_, numRest15 * sizeof(double));
+	memcpy(clone->vetViab15_, sol->vetViab15_, numRest15 * sizeof(double));*/
 
-	int numX = MAX_PER*MAX_DIA*MAX_SAL*MAX_DIS;
-	int numZ = MAX_TUR*MAX_DIA*MAX_PER;
-	int numQ = MAX_DIS;
-	int numY = MAX_DIS*MAX_SAL;
-	int numV = MAX_DIS*MAX_DIA;
+	int numX = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
+	int numZ = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
+	int numQ = inst->numDis__;
+	int numY = inst->numSal__ * inst->numDis__;
+	int numV = inst->numDia__ * inst->numDis__;
+	clone->vetSol_ = (double*)malloc(numX * sizeof(double));
+	clone->vetSolZ_ = (double*)malloc(numZ * sizeof(double));
+	clone->vetSolQ_ = (double*)malloc(numQ * sizeof(double));
+	clone->vetSolY_ = (double*)malloc(numY * sizeof(double));
+	clone->vetSolV_ = (double*)malloc(numV * sizeof(double));
 	memcpy(clone->vetSol_, sol->vetSol_, numX * sizeof(double));
 	memcpy(clone->vetSolZ_, sol->vetSolZ_, numZ * sizeof(double));
 	memcpy(clone->vetSolQ_, sol->vetSolQ_, numQ * sizeof(double));

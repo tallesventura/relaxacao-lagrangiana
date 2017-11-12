@@ -18,7 +18,7 @@
 //===================================== MÉTODOS ================================
 void montarModeloPLI(char *arq, Instancia* inst);
 
-Solucao* execCpx(char *arq, Instancia* inst);
+Solucao* execCpx(char *arq, Instancia* inst, double* vetMultRes10, double* vetMultRes14, double* vetMultRes15);
 
 void execUma(char* nomeInst);
 void execTodas();

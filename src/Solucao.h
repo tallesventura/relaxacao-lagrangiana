@@ -25,25 +25,25 @@ typedef struct tSolucao
 					// CPLEX
 	int numVar_;
 	int numRes_;
-	double* vetViab_;  // vetor que armazena se as restrições foram satisfeitas
+	//double* vetViab_;  // vetor que armazena se as restrições foram satisfeitas
 	double valSol_; // valor da solução obtida pelo CPLEX
 	double bstNod_; // valor do melhor nó (lower bound)
 	double tempo_;  // tempo de execução
 
-	double* vetViabJanHor_; // vetor que armazena se as restrições de janela-horario foram satisfeitas
-	double* vetViab14_;     // vetor que armazena se as restrições 14 foram satisfeitas
-	double* vetViab15_;		// vetor que armazena se as restrições 15 foram satisfeitas
+	//double* vetViabJanHor_; // vetor que armazena se as restrições de janela-horario foram satisfeitas
+	//double* vetViab14_;     // vetor que armazena se as restrições 14 foram satisfeitas
+	//double* vetViab15_;		// vetor que armazena se as restrições 15 foram satisfeitas
 
 	// vetor de solução (variáveis x)
-	double vetSol_[MAX_PER*MAX_DIA*MAX_SAL*MAX_DIS];
+	double* vetSol_;
 	// Matriz de solução (variáveis z)
-	double vetSolZ_[MAX_TUR*MAX_DIA*MAX_PER];
+	double* vetSolZ_;
 	// vetor de solução (variáveis q)
-	double vetSolQ_[MAX_DIS];
+	double* vetSolQ_;
 	// vetor de solução (variáveis z)
-	double vetSolY_[MAX_DIS*MAX_SAL];
+	double* vetSolY_;
 	// vetor de solução (variáveis v)
-	double vetSolV_[MAX_DIS*MAX_DIA];
+	double* vetSolV_;
 
 	// matriz de solução (período x dia x sala)
 	int matSolSal_[MAX_PER][MAX_DIA][MAX_SAL];

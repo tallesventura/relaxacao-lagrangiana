@@ -24,13 +24,15 @@ Solucao* execRelLagran(char* arq, Instancia* inst, double* vetMultRes10, double*
 	double* subGradsViavRes14 = (double*)malloc(numRest14 * sizeof(double));
 	double* subGradsViavRes15 = (double*)malloc(numRest15 * sizeof(double));
 	int itSemMelhora = 0;
+	int it = 1;
 	
-	// parar quando eta < 0.001
+	printf("\n");
 
 	do {
 
 		// Resolver o problema relaxado
-		solRel = (Solucao*)execCpx(arq, inst);
+		relaxarModelo(arq, inst, vetMultRes10, vetMultRes14, vetMultRes15);
+		solRel = (Solucao*)execCpx(arq, inst, vetMultRes10, vetMultRes14, vetMultRes15);
 		calculaFO(solRel, inst);
 
 		if (solRel->funObj_ < FOAtual)
@@ -74,10 +76,26 @@ Solucao* execRelLagran(char* arq, Instancia* inst, double* vetMultRes10, double*
 		if (itSemMelhora != 0 && itSemMelhora % 30 == 0) {
 			eta /= 2;
 		}
+
+		printf("Iteracao %d:\n", it);
+		printf("FO solRel = %f\n", solRel->funObj_);
+		printf("FO solViav = %f\n", solViav->funObj_);
+		printf("gap = %f\n", gap);
+		printf("eta = %f\n", eta);
+		printf("itSemMelhora = %d\n", itSemMelhora);
+		printf("-------------------------------------------\n");
 		
 	} while (eta > 0.001 && itSemMelhora < 50);
 
 	return solViav;
+}
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+void relaxarModelo(char *arq, Instancia* inst, double* vetMultRes10, double* vetMultRes14, double* vetMultRes15) {
+
+	montaVetCoefsFO(inst, vetMultRes10, vetMultRes14, vetMultRes15);
+	montarModeloRelaxado(arq, inst, vetMultRes10, vetMultRes14, vetMultRes15);
 }
 //------------------------------------------------------------------------------
 
@@ -147,7 +165,6 @@ void getSubGradRest10(Solucao* sol, Instancia* inst, double* vetSubGrad) {
 						}
 					}
 				double z = sol->vetSolZ_[offset3D(u, d, s, inst->numDia__, inst->numPerDia__)];
-				sol->vetViabJanHor_[pos] = soma <= z ? 0 : soma - z;
 				vetSubGrad[pos] = soma - z;
 
 				pos++;
@@ -171,8 +188,6 @@ void getSubGradRest14(Solucao* sol, Instancia* inst, double* vetSubGrad) {
 			}
 		}
 	}
-
-	return vetSubGrad;
 }
 //------------------------------------------------------------------------------
 
