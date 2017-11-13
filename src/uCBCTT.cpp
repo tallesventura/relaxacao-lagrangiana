@@ -30,7 +30,14 @@ int main(int argc, char *argv[])
 {
 	char nomeInst[10];
 	strcpy_s(nomeInst, INST);
-	strcat_s(nomeInst, "03");
+	strcat_s(nomeInst, "01");
+
+	/*double a = -1.0;
+	double b = 2;
+	printf("MAX(%f, %f) = %f\n", a, b, MAX(a, b));
+	printf("MIN(%f, %f) = %f\n", a, b, MIN(a, b));
+	printf("MAX(%f, %f) = %f\n", -a, -b, MAX(-a, -b));
+	printf("MIN(%f, %f) = %f\n", -a, -b, MIN(-a, -b));*/
 
 	execUma(nomeInst);
 	//execTodas();
@@ -43,7 +50,6 @@ int main(int argc, char *argv[])
 
 	char* arq = "teste.txt";
 	montarModeloRelaxado(arq);*/
-
 
 	printf("\n\n>>> Pressione ENTER para encerrar: ");
 	_getch();

@@ -9,6 +9,7 @@
 Solucao* execRelLagran(char* arq, Instancia* inst, double* vetMultRes10, double* vetMultRes14, double* vetMultRes15) {
 
 	Solucao *solRel, *solViav;
+	Instancia *instRel, *instViav;
 	double lb = -INFINITY;
 	double ub = INFINITY;
 	double FOAtual = INFINITY;
@@ -30,10 +31,14 @@ Solucao* execRelLagran(char* arq, Instancia* inst, double* vetMultRes10, double*
 
 	do {
 
+		instRel = clonarInstancia(inst);
+		instViav = clonarInstancia(inst);
+
 		// Resolver o problema relaxado
-		relaxarModelo(arq, inst, vetMultRes10, vetMultRes14, vetMultRes15);
-		solRel = (Solucao*)execCpx(arq, inst, vetMultRes10, vetMultRes14, vetMultRes15);
-		calculaFO(solRel, inst);
+		//printf("Relaxando o modelo\n");
+		relaxarModelo(arq, instRel, vetMultRes10, vetMultRes14, vetMultRes15);
+		solRel = (Solucao*)execCpx(arq, instRel, vetMultRes10, vetMultRes14, vetMultRes15);
+		calculaFO(solRel, instRel);
 
 		if (solRel->funObj_ < FOAtual)
 			itSemMelhora = 0;
@@ -43,22 +48,30 @@ Solucao* execRelLagran(char* arq, Instancia* inst, double* vetMultRes10, double*
 		FOAtual = solRel->funObj_;
 
 		// Viabilizar a solução
-		solViav = clonarSolucao(solRel, inst);
-		viabilizaSol(solViav, inst);
-		calculaFO(solViav, inst);
+		solViav = clonarSolucao(solRel, instViav);
+		viabilizaSol(solViav, instViav);
+		calculaFO(solViav, instViav);
 
 		// Calcular os limitantes
-		lb = MAX(lb, solRel->funObj_);
-		ub = MIN(ub, solViav->funObj_);
+		double auxLB = lb;
+		lb = MAX(auxLB, solRel->funObj_);
+		double auxUB = ub;
+		ub = MIN(auxUB, solViav->funObj_);
 
-		gap = ((solViav->funObj_ - solRel->funObj_) / solViav->funObj_) * 100;
-		if (gap < 1)
+		printf("lb: MAX(%f, %f) = %f\n", auxLB, solRel->funObj_, lb);
+		printf("ub: MIN(%f, %f) = %f\n", auxUB, solViav->funObj_, ub);
+
+		gap = ub - lb;
+		printf("gap: %f - %f = %f\n", ub, lb, gap);
+		if (gap < 1.0) {
 			break;
+		}
+			
 
 		// Calcular os sub-gradientes
-		getSubGradRest10(solRel, inst, subGradsRelRes10);
-		getSubGradRest14(solRel, inst, subGradsRelRes14);
-		getSubGradRest15(solRel, inst, subGradsRelRes15);
+		getSubGradRest10(solRel, instRel, subGradsRelRes10);
+		getSubGradRest14(solRel, instRel, subGradsRelRes14);
+		getSubGradRest15(solRel, instRel, subGradsRelRes15);
 
 		// Calcular o passo
 		double passoRes10 = calculaPasso(eta, lb, ub, subGradsRelRes10, numRest10);
@@ -66,11 +79,11 @@ Solucao* execRelLagran(char* arq, Instancia* inst, double* vetMultRes10, double*
 		double passoRes15 = calculaPasso(eta, lb, ub, subGradsRelRes15, numRest15);
 
 		// Atualizar os multiplicadores
-		getSubGradRest10(solViav, inst, subGradsViavRes10);
+		getSubGradRest10(solViav, instViav, subGradsViavRes10);
 		atualizaMultMenIg(vetMultRes10, passoRes10, subGradsViavRes10, numRest10);
-		getSubGradRest14(solViav, inst, subGradsViavRes14);
+		getSubGradRest14(solViav, instViav, subGradsViavRes14);
 		atualizaMultMenIg(vetMultRes14, passoRes14, subGradsViavRes14, numRest14);
-		getSubGradRest15(solViav, inst, subGradsViavRes15);
+		getSubGradRest15(solViav, instViav, subGradsViavRes15);
 		atualizaMultMaiIg(vetMultRes15, passoRes15, subGradsViavRes15, numRest15);
 
 		if (itSemMelhora != 0 && itSemMelhora % 30 == 0) {
@@ -84,8 +97,14 @@ Solucao* execRelLagran(char* arq, Instancia* inst, double* vetMultRes10, double*
 		printf("eta = %f\n", eta);
 		printf("itSemMelhora = %d\n", itSemMelhora);
 		printf("-------------------------------------------\n");
+
+		desalocaIntancia(instViav);
+		printf("desalocou instViav\n");
+		desalocaIntancia(instRel);
+		printf("desalocou instRel\n");
+		//desalocaSolucao(solRel);
 		
-	} while (eta > 0.001 && itSemMelhora < 50);
+	} while (eta > 0.005 && itSemMelhora < 50);
 
 	return solViav;
 }

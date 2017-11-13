@@ -62,4 +62,5 @@ void imprimeZ(Solucao *sol, Instancia* inst);
 void imprimeY(Solucao *sol, Instancia* inst);
 void calculaFO(Solucao *sol, Instancia* inst);
 Solucao* clonarSolucao(Solucao *sol, Instancia* inst);
+void desalocaSolucao(Solucao *s);
 #endif // Solucao

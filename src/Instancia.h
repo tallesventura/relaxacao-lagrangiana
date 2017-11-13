@@ -22,11 +22,11 @@ typedef struct tInstancia {
 	int numRes__;        // número de restrições
 	int numSol__;        // número de colunas
 	int numVar__;        // número de variáveis
-	Disciplina vetDisciplinas__[MAX_DIS];
-	Turma vetTurmas__[MAX_TUR];
+	Disciplina* vetDisciplinas__;
+	Turma* vetTurmas__;
 	Professor vetProfessores__[MAX_PRO];
-	Sala vetSalas__[MAX_SAL];
-	Restricao vetRestricoes__[MAX_RES];
+	Sala* vetSalas__;
+	Restricao* vetRestricoes__;
 
 	double* vetCoefX; //Já tem os pesos
 	double* vetCoefZ; //Já tem os pesos
@@ -59,5 +59,6 @@ void montaVetCoefZFO(Instancia* inst, double* vetMultRes10);
 void montaVetCoefQFO(Instancia* inst);
 void montaVetCoefYFO(Instancia* inst, double* vetMultRes14, double* vetMultRes15);
 void montaVetCoefsFO(Instancia* inst, double* vetMultRes10, double* vetMultRes14, double* vetMultRes15);
+void desalocaIntancia(Instancia* inst);
 
 #endif // !InstanciaH

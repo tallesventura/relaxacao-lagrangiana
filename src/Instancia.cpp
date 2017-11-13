@@ -14,11 +14,15 @@ Instancia* lerInstancia(char *arq)
 	FILE *f = fopen(arq, "r");
 	fscanf(f, "Name: %s\n", &inst->nomInst__);
 	fscanf(f, "Courses: %d\n", &inst->numDis__);
+	inst->vetDisciplinas__ = (Disciplina*)malloc(inst->numDis__ * sizeof(Disciplina));
 	fscanf(f, "Rooms: %d\n", &inst->numSal__);
+	inst->vetSalas__ = (Sala*)malloc(inst->numSal__ * sizeof(Sala));
 	fscanf(f, "Days: %d\n", &inst->numDia__);
 	fscanf(f, "Periods_per_day: %d\n", &inst->numPerDia__);
 	fscanf(f, "Curricula: %d\n", &inst->numTur__);
+	inst->vetTurmas__ = (Turma*)malloc(inst->numTur__ * sizeof(Turma));
 	fscanf(f, "Constraints: %d\n", &inst->numRes__);
+	inst->vetRestricoes__ = (Restricao*)malloc(inst->numRes__ * sizeof(Restricao));
 	fscanf(f, "\nCOURSES:\n");
 	inst->numPerTot__ = inst->numDia__ * inst->numPerDia__;
 	inst->numPro__ = 0;
@@ -85,10 +89,10 @@ Instancia* lerInstancia(char *arq)
 //------------------------------------------------------------------------------
 void initCoefsFO(Instancia* inst) {
 
-	int numX = MAX_PER * MAX_SAL * MAX_DIS;
-	int numZ = MAX_TUR * MAX_DIA * MAX_PER;
-	int numQ = MAX_DIS;
-	int numY = MAX_SAL * MAX_DIS;
+	int numX = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
+	int numZ = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
+	int numQ = inst->numDis__;
+	int numY = inst->numSal__ * inst->numDis__;
 
 	inst->vetCoefX = (double*)malloc(numX * sizeof(double));
 	inst->vetCoefZ = (double*)malloc(numZ * sizeof(double));
@@ -118,16 +122,22 @@ Instancia* clonarInstancia(Instancia* inst) {
 	clone->numRes__ = inst->numRes__;
 	clone->numSol__ = inst->numSol__;
 	clone->numVar__ = inst->numVar__;
-	memcpy(clone->vetDisciplinas__, inst->vetDisciplinas__, MAX_DIS*sizeof(Disciplina));
-	memcpy(clone->vetTurmas__, inst->vetTurmas__, MAX_TUR*sizeof(Turma));
-	memcpy(clone->vetProfessores__, inst->vetProfessores__, MAX_PRO*sizeof(Professor));
-	memcpy(clone->vetSalas__, inst->vetSalas__, MAX_SAL*sizeof(Sala));
-	memcpy(clone->vetRestricoes__, inst->vetRestricoes__, MAX_RES*sizeof(Restricao));
 
-	int numX = MAX_PER * MAX_SAL * MAX_DIS;
-	int numZ = MAX_TUR * MAX_DIA * MAX_PER;
-	int numQ = MAX_DIS;
-	int numY = MAX_SAL * MAX_DIS;
+	clone->vetDisciplinas__ = (Disciplina*)malloc(inst->numDis__ * sizeof(Disciplina));
+	clone->vetTurmas__ = (Turma*)malloc(inst->numTur__ * sizeof(Turma));
+	clone->vetSalas__ = (Sala*)malloc(inst->numSal__ * sizeof(Sala));
+	clone->vetRestricoes__ = (Restricao*)malloc(inst->numRes__ * sizeof(Restricao));
+
+	memcpy(clone->vetDisciplinas__, inst->vetDisciplinas__, inst->numDis__*sizeof(Disciplina));
+	memcpy(clone->vetTurmas__, inst->vetTurmas__, inst->numTur__*sizeof(Turma));
+	memcpy(clone->vetProfessores__, inst->vetProfessores__, MAX_PRO*sizeof(Professor));
+	memcpy(clone->vetSalas__, inst->vetSalas__, inst->numSal__*sizeof(Sala));
+	memcpy(clone->vetRestricoes__, inst->vetRestricoes__, inst->numRes__*sizeof(Restricao));
+
+	int numX = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
+	int numZ = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
+	int numQ = inst->numDis__;
+	int numY = inst->numSal__ * inst->numDis__;
 
 	clone->vetCoefX = (double*)malloc(numX * sizeof(double));
 	clone->vetCoefZ = (double*)malloc(numZ * sizeof(double));
@@ -142,6 +152,10 @@ Instancia* clonarInstancia(Instancia* inst) {
 	int numRest10 = inst->numTur__*inst->numDia__*inst->numPerDia__;
 	int numRest14 = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
 	int numRest15 = inst->numSal__*inst->numDis__;
+
+	clone->vetRestJanHor__ = (RestJanHor*)malloc(numRest10 * sizeof(RestJanHor));
+	clone->vetRest14__ = (RestSalDif*)malloc(numRest14 * sizeof(RestSalDif));
+	clone->vetRest15__ = (RestSalDif*)malloc(numRest15 * sizeof(RestSalDif));
 
 	memcpy(clone->vetRestJanHor__, inst->vetRestJanHor__, numRest10 * sizeof(RestJanHor));
 	memcpy(clone->vetRest14__, inst->vetRest14__, numRest14 * sizeof(RestSalDif));
@@ -212,9 +226,9 @@ RestSalDif* getVetSalDif(Instancia *inst, int numRest) {
 //------------------------------------------------------------------------------
 void initVetCoefXFO(Instancia* inst) {
 
-	for (int p = 0; p < MAX_PER * MAX_DIA; p++) {
-		for (int r = 0; r < MAX_SAL; r++) {
-			for (int c = 0; c < MAX_DIS; c++) {
+	for (int p = 0; p < inst->numPerTot__; p++) {
+		for (int r = 0; r < inst->numSal__; r++) {
+			for (int c = 0; c < inst->numDis__; c++) {
 				int pos = offset3D(r, p, c, inst->numPerTot__, inst->numDis__);
 				if (inst->vetDisciplinas__[c].numAlu_ > inst->vetSalas__[r].capacidade_)
 					inst->vetCoefX[pos] = (inst->vetDisciplinas__[c].numAlu_ - inst->vetSalas__[r].capacidade_);
@@ -438,5 +452,19 @@ void montaVetCoefsFO(Instancia* inst, double* vetMultRes10, double* vetMultRes14
 	montaVetCoefQFO(inst);
 	montaVetCoefYFO(inst, vetMultRes14, vetMultRes15);
 
+}
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+void desalocaIntancia(Instancia* inst) {
+
+	free(inst->vetDisciplinas__);
+	free(inst->vetTurmas__);
+	free(inst->vetSalas__);
+	free(inst->vetRestricoes__);
+	free(inst->vetRestJanHor__);
+	free(inst->vetRest14__);
+	free(inst->vetRest15__);
+	free(inst);
 }
 //------------------------------------------------------------------------------

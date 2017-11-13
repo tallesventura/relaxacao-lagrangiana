@@ -448,3 +448,15 @@ Solucao* clonarSolucao(Solucao *sol, Instancia* inst) {
 	return clone;
 }
 //------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+void desalocaSolucao(Solucao *s) {
+
+	free(s->vetSol_);
+	free(s->vetSolZ_);
+	free(s->vetSolQ_);
+	free(s->vetSolY_);
+	free(s->vetSolV_);
+	free(s);
+}
+//------------------------------------------------------------------------------
