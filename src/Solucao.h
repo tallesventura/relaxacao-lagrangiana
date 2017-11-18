@@ -40,16 +40,16 @@ typedef struct tSolucao
 	double* vetSolZ_;
 	// vetor de solução (variáveis q)
 	double* vetSolQ_;
-	// vetor de solução (variáveis z)
+	// vetor de solução (variáveis y)
 	double* vetSolY_;
 	// vetor de solução (variáveis v)
 	double* vetSolV_;
 
 	// matriz de solução (período x dia x sala)
-	int matSolSal_[MAX_PER][MAX_DIA][MAX_SAL];
+	int* matSolSal_; // offset: p, d, r
 
 	// matriz de solução (período x dia x turma)
-	int matSolTur_[MAX_PER][MAX_DIA][MAX_TUR];
+	int* matSolTur_; // offset: p, d, u
 }Solucao;
 
 //// MÉTODOS ===================================================================================

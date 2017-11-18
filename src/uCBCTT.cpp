@@ -20,8 +20,8 @@
 #define RELAXAR
 //#define ESCREVE_CSV
 
-char INST[50] = "comp";
-//char INST[50] = "toy";
+//char INST[50] = "comp";
+char INST[50] = "toy";
 
 //==============================================================================
 
@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
 {
 	char nomeInst[10];
 	strcpy_s(nomeInst, INST);
-	strcat_s(nomeInst, "01");
+	//strcat_s(nomeInst, "01");
 
 	/*double a = -1.0;
 	double b = 2;
@@ -125,7 +125,8 @@ void execUma(char* nomeInst) {
 	strcat_s(aux, ".sol");
 	printf("Escrevendo Solucao\n");
 	escreverSol(sol, aux, inst);
-	free(inst);
+	desalocaIntancia(inst);
+	desalocaSolucao(sol);
 }
 
 //void execTodas() {
@@ -418,7 +419,7 @@ void montarModeloPLI(char *arq, Instancia* inst)
 		for (int d = 0; d < inst->numDia__; d++)
 		{
 			for (int c = 0; c < inst->numDis__; c++)
-				if (inst->matDisTur__[c][u] == 1)
+				if (inst->matDisTur__[offset2D(c, u, inst->numTur__)] == 1)
 				{
 					for (int r = 0; r < inst->numSal__; r++)
 						fprintf(f, "+ x_%d_%d_%d - x_%d_%d_%d ", (d*inst->numPerDia__), r, c, (d*inst->numPerDia__) + 1, r, c);
@@ -432,7 +433,7 @@ void montarModeloPLI(char *arq, Instancia* inst)
 		for (int d = 0; d < inst->numDia__; d++)
 		{
 			for (int c = 0; c < inst->numDis__; c++)
-				if (inst->matDisTur__[c][u] == 1)
+				if (inst->matDisTur__[offset2D(c, u, inst->numTur__)] == 1)
 				{
 					for (int r = 0; r < inst->numSal__; r++)
 						fprintf(f, "+ x_%d_%d_%d - x_%d_%d_%d ", (d*inst->numPerDia__) + inst->numPerDia__ - 1, r, c, (d*inst->numPerDia__) + inst->numPerDia__ - 2, r, c);
@@ -448,7 +449,7 @@ void montarModeloPLI(char *arq, Instancia* inst)
 			for (int d = 0; d < inst->numDia__; d++)
 			{
 				for (int c = 0; c < inst->numDis__; c++)
-					if (inst->matDisTur__[c][u] == 1)
+					if (inst->matDisTur__[offset2D(c, u, inst->numTur__)] == 1)
 					{
 						for (int r = 0; r < inst->numSal__; r++)
 							fprintf(f, "+ x_%d_%d_%d - x_%d_%d_%d - x_%d_%d_%d ", (d*inst->numPerDia__) + s - 1, r, c, (d*inst->numPerDia__) + s - 2, r, c, (d*inst->numPerDia__) + s, r, c);
@@ -724,7 +725,7 @@ void montarModeloRelaxado(char *arq, Instancia* inst, double* vetAlpha, double* 
 		for (int d = 0; d < inst->numDia__; d++)
 		{
 			for (int c = 0; c < inst->numDis__; c++)
-				if (matDisTur__[c][u] == 1)
+				if (matDisTur__[offset2D(c, u, inst->numTur__)] == 1)
 				{
 					for (int r = 0; r < inst->numSal__; r++)
 						fprintf(f, "+ x_%d_%d_%d - x_%d_%d_%d ", (d*inst->numPerDia__), r, c, (d*inst->numPerDia__) + 1, r, c);
@@ -738,7 +739,7 @@ void montarModeloRelaxado(char *arq, Instancia* inst, double* vetAlpha, double* 
 		for (int d = 0; d < inst->numDia__; d++)
 		{
 			for (int c = 0; c < inst->numDis__; c++)
-				if (matDisTur__[c][u] == 1)
+				if (matDisTur__[offset2D(c, u, inst->numTur__)] == 1)
 				{
 					for (int r = 0; r < inst->numSal__; r++)
 						fprintf(f, "+ x_%d_%d_%d - x_%d_%d_%d ", (d*inst->numPerDia__) + inst->numPerDia__ - 1, r, c, (d*inst->numPerDia__) + inst->numPerDia__ - 2, r, c);
@@ -754,7 +755,7 @@ void montarModeloRelaxado(char *arq, Instancia* inst, double* vetAlpha, double* 
 			for (int d = 0; d < inst->numDia__; d++)
 			{
 				for (int c = 0; c < inst->numDis__; c++)
-					if (matDisTur__[c][u] == 1)
+					if (matDisTur__[offset2D(c, u, inst->numTur__)] == 1)
 					{
 						for (int r = 0; r < inst->numSal__; r++)
 							fprintf(f, "+ x_%d_%d_%d - x_%d_%d_%d - x_%d_%d_%d ", (d*inst->numPerDia__) + s - 1, r, c, (d*inst->numPerDia__) + s - 2, r, c, (d*inst->numPerDia__) + s, r, c);
@@ -856,7 +857,7 @@ void montarModeloRelaxado(char *arq, Instancia* inst, double* vetAlpha, double* 
 //		{
 //			double soma = 0;
 //			for (int c = 0; c < inst->numDis__; c++)
-//				if (inst->matDisTur__[c][u] == 1)
+//				if (inst->matDisTur__[offset2D(c, u, inst->numTur__)] == 1)
 //				{
 //					for (int r = 0; r < inst->numSal__; r++) {
 //						int prim = d*inst->numPerDia__;
@@ -881,7 +882,7 @@ void montarModeloRelaxado(char *arq, Instancia* inst, double* vetAlpha, double* 
 //		{
 //			double soma = 0;
 //			for (int c = 0; c < inst->numDis__; c++)
-//				if (inst->matDisTur__[c][u] == 1)
+//				if (inst->matDisTur__[offset2D(c, u, inst->numTur__)] == 1)
 //				{
 //					for (int r = 0; r < inst->numSal__; r++) {
 //						int prim = (d*inst->numPerDia__) + inst->numPerDia__ - 1;
@@ -908,7 +909,7 @@ void montarModeloRelaxado(char *arq, Instancia* inst, double* vetAlpha, double* 
 //			{
 //				double soma = 0;
 //				for (int c = 0; c < inst->numDis__; c++)
-//					if (inst->matDisTur__[c][u] == 1)
+//					if (inst->matDisTur__[offset2D(c, u, inst->numTur__)] == 1)
 //					{
 //						for (int r = 0; r < inst->numSal__; r++) {
 //							int prim = (d*inst->numPerDia__) + s - 1;

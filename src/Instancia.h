@@ -24,7 +24,7 @@ typedef struct tInstancia {
 	int numVar__;        // número de variáveis
 	Disciplina* vetDisciplinas__;
 	Turma* vetTurmas__;
-	Professor vetProfessores__[MAX_PRO];
+	Professor* vetProfessores__;
 	Sala* vetSalas__;
 	Restricao* vetRestricoes__;
 
@@ -38,7 +38,7 @@ typedef struct tInstancia {
 	RestSalDif *vetRest15__; // Vetor com as restrições do tipo 15 (salas diferentes)
 
 	// ------------ Auxiliares
-	int matDisTur__[MAX_DIS][MAX_TUR]; // Dis x Cur; 1 se a disciplina d faz parte do currículo c; 0 caso contrário
+	int* matDisTur__; // Dis x Cur; 1 se a disciplina d faz parte do currículo c; 0 caso contrário
 }Instancia;
 //------------------------------------------------------------------------------
 

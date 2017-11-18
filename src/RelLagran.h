@@ -19,11 +19,12 @@
 
 Solucao* execRelLagran(char* arq, Instancia* inst, double* vetMultRes10, double* vetMultRes14, double* vetMultRes15);
 void relaxarModelo(char *arq, Instancia* inst, double* vetMultRes10, double* vetMultRes14, double* vetMultRes15);
-void getSubGradRest10(Solucao* sol, Instancia* inst, double* vetSubGrad);
-void getSubGradRest14(Solucao* sol, Instancia* inst, double* vetSubGrad);
-void getSubGradRest15(Solucao* sol, Instancia* inst, double* vetSubGrad);
+double* getSubGradRest10(Solucao* sol, Instancia* inst);
+double* getSubGradRest14(Solucao* sol, Instancia* inst);
+double* getSubGradRest15(Solucao* sol, Instancia* inst);
 double calculaPasso(double eta, double lb, double ub, double* vetSubGrad, int tamVet);
 void atualizaMultMenIg(double* vetMult, double passo, double* subGrad, int tamVet);
 void atualizaMultMaiIg(double* vetMult, double passo, double* subGrad, int tamVet);
+double* juntaVetsSubGrad(double* vetSubGrad10, double* vetSubGrad14, double* vetSubGrad15, int tamSubGra10, int tamSubGra14, int tamSubGra15);
 
 #endif // RelLagran

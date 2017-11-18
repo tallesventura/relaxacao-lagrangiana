@@ -23,6 +23,8 @@ Instancia* lerInstancia(char *arq)
 	inst->vetTurmas__ = (Turma*)malloc(inst->numTur__ * sizeof(Turma));
 	fscanf(f, "Constraints: %d\n", &inst->numRes__);
 	inst->vetRestricoes__ = (Restricao*)malloc(inst->numRes__ * sizeof(Restricao));
+
+	inst->vetProfessores__ = (Professor*)malloc(MAX_PRO * sizeof(Professor));
 	fscanf(f, "\nCOURSES:\n");
 	inst->numPerTot__ = inst->numDia__ * inst->numPerDia__;
 	inst->numPro__ = 0;
@@ -45,9 +47,17 @@ Instancia* lerInstancia(char *arq)
 			inst->numPro__++;
 		}
 	}
-	for (int i = 0; i < inst->numDis__; i++)
-		for (int j = 0; j < inst->numTur__; j++)
-			inst->matDisTur__[i][j] = 0;
+
+	inst->matDisTur__ = (int*)malloc(inst->numDis__ * inst->numTur__ * sizeof(int));
+
+	pos = 0;
+	for (int i = 0; i < inst->numDis__; i++) {
+		for (int j = 0; j < inst->numTur__; j++) {
+			inst->matDisTur__[pos] = 0;
+			pos++;
+		}
+	}
+			
 	fscanf(f, "\nROOMS:\n");
 	for (int i = 0; i < inst->numSal__; i++)
 		fscanf(f, "%s %d\n", &inst->vetSalas__[i].nome_, &inst->vetSalas__[i].capacidade_);
@@ -63,7 +73,7 @@ Instancia* lerInstancia(char *arq)
 				if (strcmp(aux, inst->vetDisciplinas__[k].nome_) == 0)
 				{
 					inst->vetTurmas__[i].vetDis_[j] = k;
-					inst->matDisTur__[k][i] = 1;
+					inst->matDisTur__[offset2D(k,i, inst->numTur__)] = 1;
 					break;
 				}
 		}
@@ -125,6 +135,7 @@ Instancia* clonarInstancia(Instancia* inst) {
 
 	clone->vetDisciplinas__ = (Disciplina*)malloc(inst->numDis__ * sizeof(Disciplina));
 	clone->vetTurmas__ = (Turma*)malloc(inst->numTur__ * sizeof(Turma));
+	clone->vetProfessores__ = (Professor*)malloc(MAX_PRO * sizeof(Professor));
 	clone->vetSalas__ = (Sala*)malloc(inst->numSal__ * sizeof(Sala));
 	clone->vetRestricoes__ = (Restricao*)malloc(inst->numRes__ * sizeof(Restricao));
 
@@ -161,7 +172,8 @@ Instancia* clonarInstancia(Instancia* inst) {
 	memcpy(clone->vetRest14__, inst->vetRest14__, numRest14 * sizeof(RestSalDif));
 	memcpy(clone->vetRest15__, inst->vetRest15__, numRest15 * sizeof(RestSalDif));
 
-	memcpy(clone->matDisTur__, inst->matDisTur__, MAX_DIS * MAX_TUR * sizeof(int));
+	clone->matDisTur__ = (int*)malloc(inst->numDis__ * inst->numTur__ * sizeof(int));
+	memcpy(clone->matDisTur__, inst->matDisTur__, inst->numDis__ * inst->numTur__ * sizeof(int));
 
 	return clone;
 }
@@ -252,7 +264,7 @@ void montaCoefRestJanHor(Instancia* inst) {
 		for (int d = 0; d < inst->numDia__; d++)
 		{
 			for (int c = 0; c < inst->numDis__; c++)
-				if (inst->matDisTur__[c][u] == 1)
+				if (inst->matDisTur__[offset2D(c, u, inst->numTur__)] == 1)
 				{
 					for (int r = 0; r < inst->numSal__; r++) {
 						rest->coefMatX[offset3D(r, d*inst->numPerDia__, c, inst->numPerTot__, inst->numDis__)] = 1;
@@ -270,7 +282,7 @@ void montaCoefRestJanHor(Instancia* inst) {
 		for (int d = 0; d < inst->numDia__; d++)
 		{
 			for (int c = 0; c < inst->numDis__; c++)
-				if (inst->matDisTur__[c][u] == 1)
+				if (inst->matDisTur__[offset2D(c, u, inst->numTur__)] == 1)
 				{
 					for (int r = 0; r < inst->numSal__; r++) {
 						rest->coefMatX[offset3D(r, (d*inst->numPerDia__) + inst->numPerDia__ - 1, c, inst->numPerTot__, inst->numDis__)] = 1;
@@ -290,7 +302,7 @@ void montaCoefRestJanHor(Instancia* inst) {
 			for (int d = 0; d < inst->numDia__; d++)
 			{
 				for (int c = 0; c < inst->numDis__; c++)
-					if (inst->matDisTur__[c][u] == 1)
+					if (inst->matDisTur__[offset2D(c, u, inst->numTur__)] == 1)
 					{
 						for (int r = 0; r < inst->numSal__; r++) {
 							rest->coefMatX[offset3D(r, (d*inst->numPerDia__) + s - 1, c, inst->numPerTot__, inst->numDis__)] = 1;
@@ -435,7 +447,7 @@ void montaVetCoefYFO(Instancia* inst, double* vetMultRes14, double* vetMultRes15
 			// Coeficientes de y das restrições do tipo 15 (Salas diferentes)
 			double somaR15 = 0;
 			for (int i = 0; i < numRest15; i++) {
-				somaR14 -= inst->vetRest15__[i].coefMatY[posY] * vetMultRes15[i];
+				somaR15 -= inst->vetRest15__[i].coefMatY[posY] * vetMultRes15[i];
 			}
 
 			inst->vetCoefY[posY] = (PESOS[3] * inst->vetCoefY[posY]) + somaR14 + somaR15;
@@ -460,8 +472,13 @@ void desalocaIntancia(Instancia* inst) {
 
 	free(inst->vetDisciplinas__);
 	free(inst->vetTurmas__);
+	free(inst->vetProfessores__);
 	free(inst->vetSalas__);
 	free(inst->vetRestricoes__);
+	free(inst->vetCoefX);
+	free(inst->vetCoefZ);
+	free(inst->vetCoefQ);
+	free(inst->vetCoefY);
 	free(inst->vetRestJanHor__);
 	free(inst->vetRest14__);
 	free(inst->vetRest15__);
