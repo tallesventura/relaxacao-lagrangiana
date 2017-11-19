@@ -20,7 +20,6 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMultRes10, dou
 	printf("%d, %d, %d", numRest10, numRest14, numRest15);
 
 	int itSemMelhora = 0;
-	int it = 1;
 	
 	printf("\n");
 
@@ -85,7 +84,6 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMultRes10, dou
 		atualizaMultMenIg(vetMultRes14, passo, subGradsRes14, numRest14);
 		atualizaMultMaiIg(vetMultRes15, passo, subGradsRes15, numRest15);
 
-		printf("Iteracao %d:\n", it);
 		printf("FO solRel = %f\n", solRel->funObj_);
 		printf("FO solViav = %f\n", solViav->funObj_);
 		printf("gap = %f\n", gap);

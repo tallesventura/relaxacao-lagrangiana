@@ -256,9 +256,9 @@ void initVetCoefXFO(Instancia* inst) {
 void montaCoefRestJanHor(Instancia* inst) {
 
 	int numRest = inst->numTur__*inst->numDia__*inst->numPerDia__;
+	int pos = 0;
 
 	// Primeiro período do dia
-	RestJanHor *rest = &inst->vetRestJanHor__[0];
 	for (int u = 0; u < inst->numTur__; u++)
 	{
 		for (int d = 0; d < inst->numDia__; d++)
@@ -267,16 +267,16 @@ void montaCoefRestJanHor(Instancia* inst) {
 				if (inst->matDisTur__[offset2D(c, u, inst->numTur__)] == 1)
 				{
 					for (int r = 0; r < inst->numSal__; r++) {
-						rest->coefMatX[offset3D(r, d*inst->numPerDia__, c, inst->numPerTot__, inst->numDis__)] = 1;
-						rest->coefMatX[offset3D(r, d*inst->numPerDia__ + 1, c, inst->numPerTot__, inst->numDis__)] = -1;
+						inst->vetRestJanHor__[pos].coefMatX[offset3D(r, d*inst->numPerDia__, c, inst->numPerTot__, inst->numDis__)] = 1;
+						inst->vetRestJanHor__[pos].coefMatX[offset3D(r, d*inst->numPerDia__ + 1, c, inst->numPerTot__, inst->numDis__)] = -1;
 					}
 				}
-			rest->coefMatZ[offset3D(u, d, 0, inst->numDia__, inst->numPerDia__)] = -1;
+			inst->vetRestJanHor__[pos].coefMatZ[offset3D(0, u, d, inst->numTur__, inst->numDia__)] = -1;
+			pos++;
 		}
 	}
 
 	// Último período do dia
-	rest = &inst->vetRestJanHor__[1];
 	for (int u = 0; u < inst->numTur__; u++)
 	{
 		for (int d = 0; d < inst->numDia__; d++)
@@ -285,18 +285,18 @@ void montaCoefRestJanHor(Instancia* inst) {
 				if (inst->matDisTur__[offset2D(c, u, inst->numTur__)] == 1)
 				{
 					for (int r = 0; r < inst->numSal__; r++) {
-						rest->coefMatX[offset3D(r, (d*inst->numPerDia__) + inst->numPerDia__ - 1, c, inst->numPerTot__, inst->numDis__)] = 1;
-						rest->coefMatX[offset3D(r, (d*inst->numPerDia__) + inst->numPerDia__ - 2, c, inst->numPerTot__, inst->numDis__)] = -1;
+						inst->vetRestJanHor__[pos].coefMatX[offset3D(r, (d*inst->numPerDia__) + inst->numPerDia__ - 1, c, inst->numPerTot__, inst->numDis__)] = 1;
+						inst->vetRestJanHor__[pos].coefMatX[offset3D(r, (d*inst->numPerDia__) + inst->numPerDia__ - 2, c, inst->numPerTot__, inst->numDis__)] = -1;
 					}
 				}
-			rest->coefMatZ[offset3D(u, d, 1, inst->numDia__, inst->numPerDia__)] = -1;
+			inst->vetRestJanHor__[pos].coefMatZ[offset3D(1, u, d, inst->numTur__, inst->numDia__)] = -1;
+			pos++;
 		}
 	}
 
 	// Períodos intermediários do dia
 	for (int s = 2; s < inst->numPerDia__; s++)
 	{
-		rest = &inst->vetRestJanHor__[s];
 		for (int u = 0; u < inst->numTur__; u++)
 		{
 			for (int d = 0; d < inst->numDia__; d++)
@@ -305,12 +305,13 @@ void montaCoefRestJanHor(Instancia* inst) {
 					if (inst->matDisTur__[offset2D(c, u, inst->numTur__)] == 1)
 					{
 						for (int r = 0; r < inst->numSal__; r++) {
-							rest->coefMatX[offset3D(r, (d*inst->numPerDia__) + s - 1, c, inst->numPerTot__, inst->numDis__)] = 1;
-							rest->coefMatX[offset3D(r, (d*inst->numPerDia__) + s - 2, c, inst->numPerTot__, inst->numDis__)] = -1;
-							rest->coefMatX[offset3D(r, (d*inst->numPerDia__) + s, c, inst->numPerTot__, inst->numDis__)] = -1;
+							inst->vetRestJanHor__[pos].coefMatX[offset3D(r, (d*inst->numPerDia__) + s - 1, c, inst->numPerTot__, inst->numDis__)] = 1;
+							inst->vetRestJanHor__[pos].coefMatX[offset3D(r, (d*inst->numPerDia__) + s - 2, c, inst->numPerTot__, inst->numDis__)] = -1;
+							inst->vetRestJanHor__[pos].coefMatX[offset3D(r, (d*inst->numPerDia__) + s, c, inst->numPerTot__, inst->numDis__)] = -1;
 						}
 					}
-				rest->coefMatZ[offset3D(u, d, s, inst->numDia__, inst->numPerDia__)] = -1;
+				inst->vetRestJanHor__[pos].coefMatZ[offset3D(s, u, d, inst->numTur__, inst->numDia__)] = -1;
+				pos++;
 			}
 		}
 	}

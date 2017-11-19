@@ -18,7 +18,7 @@
 #define RES_SAL_DIF // Restrição soft de salas diferentes
 
 #define RELAXAR
-//#define ESCREVE_CSV
+#define ESCREVE_CSV
 
 //char INST[50] = "comp";
 char INST[50] = "toy";
@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
 {
 	char nomeInst[10];
 	strcpy_s(nomeInst, INST);
-	//strcat_s(nomeInst, "01");
+	//strcat_s(nomeInst, "3");
 
 	/*double a = -1.0;
 	double b = 2;
@@ -67,9 +67,7 @@ void execUma(char* nomeInst) {
 	printf("%s\n", aux);
 	Instancia* inst = lerInstancia(aux);
 	initCoefsFO(inst);
-	//lerSolucoesIniciais();
 
-	//testarEntrada();
 	strcpy_s(aux, PATH_INST);
 	strcat_s(aux, nomeInst);
 #ifndef RES_SOFT
@@ -80,8 +78,6 @@ void execUma(char* nomeInst) {
 	int numRest10 = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
 	int numRest14 = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
 	int numRest15 = inst->numSal__*inst->numDis__;
-
-	initCoefsFO(inst);
 
 	printf("Inicializando os vetores de restricoes 10\n");
 	inst->vetRestJanHor__ =  getVetJanHor(inst, numRest10);
@@ -106,11 +102,18 @@ void execUma(char* nomeInst) {
 	printf("Inicializando vetor de multiplicadores das restricoes 15\n");
 	initMultiplicadores(vetMultRes15, numRest15, VAL_INIT_RES_15);
 
+	// Sem relaxacao
+	//montarModeloPLI(aux, inst);
+	
+	montaVetCoefsFO(inst, vetMultRes10, vetMultRes14, vetMultRes15);
+	montarModeloRelaxado(aux, inst, vetMultRes10, vetMultRes14, vetMultRes15);
 #else
 	montarModeloPLI(aux, inst);
 #endif
 	printf("Executando Relaxacao Lagrangiana\n");
-	sol = execRelLagran(aux, inst, vetMultRes10, vetMultRes14, vetMultRes15);
+	//sol = execRelLagran(aux, inst, vetMultRes10, vetMultRes14, vetMultRes15);
+	sol = execCpx(aux, inst, vetMultRes10, vetMultRes14, vetMultRes15);
+	calculaFO(sol, inst);
 	strcpy_s(aux, PATH_INST);
 	strcat_s(aux, nomeInst);
 #ifndef RES_SOFT
@@ -271,7 +274,6 @@ void montarModeloPLI(char *arq, Instancia* inst)
 	}
 	fprintf(f, "\nST\n");
 #else
-#ifdef RES_CAP_SAL
 	fprintf(f, "\n\\Capacidade das salas\n");
 	for (int r = 0; r < inst->numSal__; r++)
 	{
@@ -285,9 +287,7 @@ void montarModeloPLI(char *arq, Instancia* inst)
 			fprintf(f, "\n");
 		}
 	}
-#endif
 
-#ifdef RES_JAN_HOR
 	fprintf(f, "\n\n\\Janelas de horários\n");
 	for (int u = 0; u < inst->numTur__; u++)
 	{
@@ -298,15 +298,11 @@ void montarModeloPLI(char *arq, Instancia* inst)
 			fprintf(f, "\n");
 		}
 	}
-#endif
 
-#ifdef RES_DIA_MIN
 	fprintf(f, "\n\\Dias mínimos\n");
 	for (int c = 0; c < inst->numDis__; c++)
 		fprintf(f, "+ %d q_%d ", PESOS[2], c);
-#endif
 
-#ifdef RES_SAL_DIF
 	fprintf(f, "\n\n\\Salas diferentes\n");
 	for (int c = 0; c < inst->numDis__; c++)
 	{
@@ -314,7 +310,6 @@ void montarModeloPLI(char *arq, Instancia* inst)
 			fprintf(f, "+ %d y_%d_%d ", PESOS[3], r, c);
 		fprintf(f, "\n");
 	}
-#endif
 
 	val = PESOS[3] * inst->numDis__;
 	fprintf(f, "- val\n");
@@ -413,6 +408,8 @@ void montarModeloPLI(char *arq, Instancia* inst)
 			fprintf(f, "+ v_%d_%d ", d, c);
 		fprintf(f, "+ q_%d >= %d\n", c, inst->vetDisciplinas__[c].diaMin_);
 	}
+
+#ifndef REL_JAN_HOR
 	fprintf(f, "\n\\R10 a R13+#PER_DIA - Janelas no horário das turmas\n");
 	for (int u = 0; u < inst->numTur__; u++)
 	{
@@ -459,6 +456,9 @@ void montarModeloPLI(char *arq, Instancia* inst)
 		}
 		fprintf(f, "\n");
 	}
+#endif // !REL_JAN_HOR
+
+#ifndef REL_SAL_DIF
 	fprintf(f, "\n\\R14 - Salas utilizadas por disciplina\n");
 	for (int p = 0; p < inst->numPerTot__; p++)
 	{
@@ -478,6 +478,8 @@ void montarModeloPLI(char *arq, Instancia* inst)
 		}
 		fprintf(f, "\n");
 	}
+#endif // !REL_SAL_DIF
+
 #endif
 	fprintf(f, "\nBOUNDS\n");
 	fprintf(f, "\n\\Variáveis x\n");
@@ -999,6 +1001,11 @@ void exportarCsv(Solucao* sol, char *arq, Instancia* inst) {
 
 	FILE *f = fopen(arq, "w");
 
+	int numRest10 = inst->numTur__*inst->numDia__*inst->numPerDia__;
+	int numRest14 = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
+	int numRest15 = inst->numSal__ * inst->numDis__;
+	int posX, posZ, posY;
+
 	for (int r = 0; r < inst->numSal__; r++) {
 		for (int p = 0; p < inst->numPerTot__; p++) {
 			for (int c = 0; c < inst->numDis__; c++) {
@@ -1060,6 +1067,85 @@ void exportarCsv(Solucao* sol, char *arq, Instancia* inst) {
 	}
 
 	fprintf(f, "\n");
+
+	fprintf(f, "\nRestrições F10 a F13\n");
+	for (int i = 0; i < numRest10; i++) {
+		fprintf(f, "Res %d,", i);
+		// Coeficientes de X
+		for (int r = 0; r < inst->numSal__; r++) {
+			for (int p = 0; p < inst->numPerTot__; p++) {
+				for (int c = 0; c < inst->numDis__; c++) {
+					posX = offset3D(r, p, c, inst->numPerTot__, inst->numDis__);
+					if (inst->vetRestJanHor__[i].coefMatX[posX] != 0)
+						fprintf(f, "%dx_%d_%d_%d,", inst->vetRestJanHor__[i].coefMatX[posX], p, r, c);
+				}
+			}
+		}
+
+		// Coeficientes de Z
+		for (int s = 0; s < inst->numPerDia__; s++) {
+			for (int u = 0; u < inst->numTur__; u++) {
+				for (int d = 0; d < inst->numDia__; d++) {
+					posZ = offset3D(s, u, d, inst->numTur__, inst->numDia__);
+					if (inst->vetRestJanHor__[i].coefMatZ[posZ] != 0) {
+						fprintf(f, "%dz_%d_%d_%d,", inst->vetRestJanHor__[i].coefMatZ[posZ], u, d, s);
+					}
+				}
+			}
+		}
+		fprintf(f, "\n");
+	}
+
+	fprintf(f, "\nRestrições F14\n");
+	for (int i = 0; i < numRest14; i++) {
+		fprintf(f, "Res %d,", i);
+		// Coeficientes de X
+		for (int r = 0; r < inst->numSal__; r++) {
+			for (int p = 0; p < inst->numPerTot__; p++) {
+				for (int c = 0; c < inst->numDis__; c++) {
+					posX = offset3D(r, p, c, inst->numPerTot__, inst->numDis__);
+					if (inst->vetRest14__[i].coefMatX[posX] != 0)
+						fprintf(f, "%dx_%d_%d_%d,", inst->vetRest14__[i].coefMatX[posX], p, r, c);
+				}
+			}
+		}
+
+		// Coeficientes de Y
+		for (int c = 0; c < inst->numDis__; c++) {
+			for (int r = 0; r < inst->numSal__; r++) {
+				posY = offset2D(c, r, inst->numSal__);
+				if (inst->vetRest14__[i].coefMatY[posY] != 0)
+					fprintf(f, "%dy_%d_%d,", inst->vetRest14__[i].coefMatY[posY], r, c);
+			}
+		}
+		fprintf(f, "\n");
+	}
+
+	fprintf(f, "\nRestrições F15\n");
+	for (int i = 0; i < numRest15; i++) {
+		fprintf(f, "Res %d,", i);
+		// Coeficientes de X
+		for (int r = 0; r < inst->numSal__; r++) {
+			for (int p = 0; p < inst->numPerTot__; p++) {
+				for (int c = 0; c < inst->numDis__; c++) {
+					posX = offset3D(r, p, c, inst->numPerTot__, inst->numDis__);
+					if (inst->vetRest15__[i].coefMatX[posX] != 0)
+						fprintf(f, "%dx_%d_%d_%d,", inst->vetRest15__[i].coefMatX[posX], p, r, c);
+				}
+			}
+		}
+
+		// Coeficientes de Y
+		for (int c = 0; c < inst->numDis__; c++) {
+			for (int r = 0; r < inst->numSal__; r++) {
+				posY = offset2D(c, r, inst->numSal__);
+				if (inst->vetRest15__[i].coefMatY[posY] != 0)
+					fprintf(f, "%dy_%d_%d,", inst->vetRest15__[i].coefMatY[posY], r, c);
+			}
+		}
+		fprintf(f, "\n");
+	}
+	
 
 	fclose(f);
 }
