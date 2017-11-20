@@ -271,7 +271,7 @@ void montaCoefRestJanHor(Instancia* inst) {
 						inst->vetRestJanHor__[pos].coefMatX[offset3D(r, d*inst->numPerDia__ + 1, c, inst->numPerTot__, inst->numDis__)] = -1;
 					}
 				}
-			inst->vetRestJanHor__[pos].coefMatZ[offset3D(0, u, d, inst->numTur__, inst->numDia__)] = -1;
+			inst->vetRestJanHor__[pos].coefMatZ[offset3D(u, d, 0, inst->numDia__, inst->numPerDia__)] = -1;
 			pos++;
 		}
 	}
@@ -289,7 +289,7 @@ void montaCoefRestJanHor(Instancia* inst) {
 						inst->vetRestJanHor__[pos].coefMatX[offset3D(r, (d*inst->numPerDia__) + inst->numPerDia__ - 2, c, inst->numPerTot__, inst->numDis__)] = -1;
 					}
 				}
-			inst->vetRestJanHor__[pos].coefMatZ[offset3D(1, u, d, inst->numTur__, inst->numDia__)] = -1;
+			inst->vetRestJanHor__[pos].coefMatZ[offset3D(u, d, 1, inst->numDia__, inst->numPerDia__)] = -1;
 			pos++;
 		}
 	}
@@ -310,7 +310,7 @@ void montaCoefRestJanHor(Instancia* inst) {
 							inst->vetRestJanHor__[pos].coefMatX[offset3D(r, (d*inst->numPerDia__) + s, c, inst->numPerTot__, inst->numDis__)] = -1;
 						}
 					}
-				inst->vetRestJanHor__[pos].coefMatZ[offset3D(s, u, d, inst->numTur__, inst->numDia__)] = -1;
+				inst->vetRestJanHor__[pos].coefMatZ[offset3D(u, d, s, inst->numDia__, inst->numPerDia__)] = -1;
 				pos++;
 			}
 		}
@@ -382,7 +382,9 @@ void montaVetCoefXFO(Instancia* inst, double* vetMultRes10, double* vetMultRes14
 					somaR15 -= inst->vetRest15__[i].coefMatX[posX] * vetMultRes15[i];
 				}
 
+				//double aux = inst->vetCoefX[posX];
 				inst->vetCoefX[posX] = (PESOS[0] * inst->vetCoefX[posX]) + somaR10 + somaR14 + somaR15;
+				//printf("Coef x_%d_%d_%d = (%d * %.2f) + %.2f + %.2f + %.2f = %.3f\n",p,r,c,PESOS[0], aux, somaR10,somaR14,somaR15, inst->vetCoefX[posX]);
 
 			}
 		}
@@ -409,7 +411,9 @@ void montaVetCoefZFO(Instancia* inst, double* vetMultRes10) {
 					somaR10 -= inst->vetRestJanHor__[i].coefMatZ[posZ] * vetMultRes10[i];
 				}
 
+				double aux = inst->vetCoefZ[posZ];
 				inst->vetCoefZ[posZ] = (PESOS[1] * inst->vetCoefZ[posZ]) + somaR10;
+				//printf("Coef z_%d_%d_%d = (%d * %.2f) + %.2f = %.3f\n", u, d, s, PESOS[1], aux, somaR10, inst->vetCoefZ[posZ]);
 			}
 		}
 	}
@@ -451,7 +455,9 @@ void montaVetCoefYFO(Instancia* inst, double* vetMultRes14, double* vetMultRes15
 				somaR15 -= inst->vetRest15__[i].coefMatY[posY] * vetMultRes15[i];
 			}
 
+			double aux = inst->vetCoefY[posY];
 			inst->vetCoefY[posY] = (PESOS[3] * inst->vetCoefY[posY]) + somaR14 + somaR15;
+			//printf("Coef y_%d_%d = (%d * %.2f) + %.2f + %.2f = %.3f\n", r,c, PESOS[3], aux, somaR14, somaR15, inst->vetCoefY[posY]);
 		}
 	}
 }

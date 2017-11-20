@@ -18,38 +18,22 @@
 #define RES_SAL_DIF // Restrição soft de salas diferentes
 
 #define RELAXAR
-#define ESCREVE_CSV
+//#define ESCREVE_CSV
 
-//char INST[50] = "comp";
-char INST[50] = "toy";
+char INST[50] = "comp";
+//char INST[50] = "toy";
 
 //==============================================================================
 
 //------------------------------------------------------------------------------
 int main(int argc, char *argv[])
 {
+	srand(time(NULL));
 	char nomeInst[10];
 	strcpy_s(nomeInst, INST);
-	//strcat_s(nomeInst, "3");
-
-	/*double a = -1.0;
-	double b = 2;
-	printf("MAX(%f, %f) = %f\n", a, b, MAX(a, b));
-	printf("MIN(%f, %f) = %f\n", a, b, MIN(a, b));
-	printf("MAX(%f, %f) = %f\n", -a, -b, MAX(-a, -b));
-	printf("MIN(%f, %f) = %f\n", -a, -b, MIN(-a, -b));*/
+	strcat_s(nomeInst, "01");
 
 	execUma(nomeInst);
-	//execTodas();
-
-	/*lerInstancia("instances\\toy.ctt");
-	initVetJanHor();
-	montaMatCoefXFO();
-	montaCoefRestJanHor();
-	initMultiplicadores();
-
-	char* arq = "teste.txt";
-	montarModeloRelaxado(arq);*/
 
 	printf("\n\n>>> Pressione ENTER para encerrar: ");
 	_getch();
@@ -96,7 +80,7 @@ void execUma(char* nomeInst) {
 	double* vetMultRes15 = (double*) malloc(numRest15 * sizeof(double));
 
 	printf("Inicializando vetor de multiplicadores das restricoes 10\n");
-	initMultiplicadores(vetMultRes10, numRest10,VAL_INIT_ALPHA);
+	initMultiplicadores(vetMultRes10, numRest10, VAL_INIT_ALPHA);
 	printf("Inicializando vetor de multiplicadores das restricoes 14\n");
 	initMultiplicadores(vetMultRes14, numRest14, VAL_INIT_RES_14);
 	printf("Inicializando vetor de multiplicadores das restricoes 15\n");
@@ -105,14 +89,14 @@ void execUma(char* nomeInst) {
 	// Sem relaxacao
 	//montarModeloPLI(aux, inst);
 	
-	montaVetCoefsFO(inst, vetMultRes10, vetMultRes14, vetMultRes15);
-	montarModeloRelaxado(aux, inst, vetMultRes10, vetMultRes14, vetMultRes15);
+	//montaVetCoefsFO(inst, vetMultRes10, vetMultRes14, vetMultRes15);
+	//montarModeloRelaxado(aux, inst, vetMultRes10, vetMultRes14, vetMultRes15);
 #else
 	montarModeloPLI(aux, inst);
 #endif
 	printf("Executando Relaxacao Lagrangiana\n");
-	//sol = execRelLagran(aux, inst, vetMultRes10, vetMultRes14, vetMultRes15);
-	sol = execCpx(aux, inst, vetMultRes10, vetMultRes14, vetMultRes15);
+	sol = execRelLagran(aux, inst, vetMultRes10, vetMultRes14, vetMultRes15);
+	//sol = execCpx(aux, inst, vetMultRes10, vetMultRes14, vetMultRes15);
 	calculaFO(sol, inst);
 	strcpy_s(aux, PATH_INST);
 	strcat_s(aux, nomeInst);
@@ -533,6 +517,21 @@ void montarModeloPLI(char *arq, Instancia* inst)
 #endif
 	fprintf(f, "\nEND");
 	fclose(f);
+}
+//------------------------------------------------------------------------------
+
+double fRand(double fMin, double fMax)
+{
+	double f = (double)rand() / RAND_MAX;
+	return fMin + f * (fMax - fMin);
+}
+
+//------------------------------------------------------------------------------
+void initMultiplicadoresAle(double* vetMult, int tam, double lb, double ub) {
+
+	for (int i = 0; i < tam; i++) {
+		vetMult[i] = fRand(lb, ub);
+	}
 }
 //------------------------------------------------------------------------------
 
@@ -1086,7 +1085,7 @@ void exportarCsv(Solucao* sol, char *arq, Instancia* inst) {
 		for (int s = 0; s < inst->numPerDia__; s++) {
 			for (int u = 0; u < inst->numTur__; u++) {
 				for (int d = 0; d < inst->numDia__; d++) {
-					posZ = offset3D(s, u, d, inst->numTur__, inst->numDia__);
+					posZ = offset3D(u, d, s, inst->numDia__, inst->numPerDia__);
 					if (inst->vetRestJanHor__[i].coefMatZ[posZ] != 0) {
 						fprintf(f, "%dz_%d_%d_%d,", inst->vetRestJanHor__[i].coefMatZ[posZ], u, d, s);
 					}

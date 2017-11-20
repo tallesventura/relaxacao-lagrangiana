@@ -9,12 +9,12 @@
 Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMultRes10, double* vetMultRes14, double* vetMultRes15) {
 
 	Solucao *solRel, *solViav, *bestSol;
-	Instancia *instRel;
+	Instancia* instRel;
 	double lb = -INFINITY;
 	double ub = INFINITY;
 	double eta = 2.0;
 	double gap;
-	int numRest10 = instOrig->numTur__*instOrig->numDia__*instOrig->numPerDia__;
+	int numRest10 = instOrig->numTur__ * instOrig->numDia__ * instOrig->numPerDia__;
 	int numRest14 = instOrig->numPerTot__ * instOrig->numSal__ * instOrig->numDis__;
 	int numRest15 = instOrig->numSal__ * instOrig->numDis__;
 	printf("%d, %d, %d", numRest10, numRest14, numRest15);
@@ -25,17 +25,21 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMultRes10, dou
 
 	do {
 
+		printf("Clonando instância\n");
 		instRel = clonarInstancia(instOrig);
-		//instViav = clonarInstancia(inst);
 
 		// Resolver o problema relaxado
 		printf("Relaxando o modelo\n");
 		relaxarModelo(arq, instRel, vetMultRes10, vetMultRes14, vetMultRes15);
+		printf("Executando CPX\n");
 		solRel = (Solucao*)execCpx(arq, instRel, vetMultRes10, vetMultRes14, vetMultRes15);
+		printf("Calculando FO\n");
 		calculaFO(solRel, instRel);
 
 		// Viabilizar a solução
+		printf("Clonando solucao\n");
 		solViav = clonarSolucao(solRel, instRel);
+		printf("Viabilizando solucao\n");
 		viabilizaSol(solViav, instOrig);
 		calculaFO(solViav, instOrig);
 
@@ -63,6 +67,7 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMultRes10, dou
 		}
 
 		// Calcular os sub-gradientes
+		printf("Calculando os sub-gradientes\n");
 		double* subGradsRes10 = (double*) getSubGradRest10(solRel, instRel);
 		double* subGradsRes14 = (double*) getSubGradRest14(solRel, instRel);
 		double* subGradsRes15 = (double*) getSubGradRest15(solRel, instRel);
@@ -249,7 +254,7 @@ double calculaPasso(double eta, double lb, double ub, double* vetSubGrad, int ta
 	for (int i = 0; i < tamVet; i++) {
 		modulo += vetSubGrad[i] * vetSubGrad[i];
 	}
-
+	//printf("MODULO: %f\n", modulo);
 	return (eta * (ub - lb)) / modulo;
 }
 //------------------------------------------------------------------------------
@@ -261,7 +266,11 @@ void atualizaMultMenIg(double* vetMult, double passo, double* subGrad, int tamVe
 	for (int i = 0; i < tamVet; i++) {
 		val = vetMult[i];
 		vetMult[i] = MIN(0, val + (passo * subGrad[i]));
-		//printf("MIN(0, %.3f)\n", val + (passo * subGrad[i]));
+		//printf("MIN(0, %.3f + (%.3f * %.3f))\n", val, passo, subGrad[i]);
+		if (vetMult[i] > val) {
+			//printf("MAIOR\n");
+			//printf("MENOR\n");
+		}
 	}
 }
 //------------------------------------------------------------------------------
@@ -273,7 +282,11 @@ void atualizaMultMaiIg(double* vetMult, double passo, double* subGrad, int tamVe
 	for (int i = 0; i < tamVet; i++) {
 		val = vetMult[i];
 		vetMult[i] = MAX(0, val + (passo * subGrad[i]));
-		//printf("MAX(0, %.3f)\n", val + (passo * subGrad[i]));
+		//printf("MAX(0, %.3f + (%.3f * %.3f))\n", val, passo, subGrad[i]);
+		if (vetMult[i] < val) {
+			//printf("MENOR\n");
+			//printf("MAIOR\n");
+		}
 	}
 }
 //------------------------------------------------------------------------------
