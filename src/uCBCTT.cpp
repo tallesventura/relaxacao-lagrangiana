@@ -31,7 +31,7 @@ int main(int argc, char *argv[])
 	srand(time(NULL));
 	char nomeInst[10];
 	strcpy_s(nomeInst, INST);
-	//strcat_s(nomeInst, "01");
+	strcat_s(nomeInst, "3");
 
 	execUma(nomeInst);
 
@@ -1149,3 +1149,209 @@ void exportarCsv(Solucao* sol, char *arq, Instancia* inst) {
 	fclose(f);
 }
 //------------------------------------------------------------------------------
+
+double** montaMatD(Instancia* inst) {
+
+	int numX = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
+	int numRest10 = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
+	int numRest14 = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
+	int numRest15 = inst->numSal__ * inst->numDis__;
+	int numRes = numRest10 + numRest14 + numRest15;
+	int posX;
+
+	double** matTrans = (double**)malloc(numX * sizeof(double*));
+	for (int i = 0; i < numX; i++) {
+		matTrans[i] = (double*)malloc(numRes * sizeof(double));
+	}
+
+	// Transpondo a matriz
+	int lin = 0;
+	for (int p = 0; p < inst->numPerTot__; p++) {
+		for (int r = 0; r < inst->numSal__; r++) {
+			for (int c = 0; c < inst->numDis__; c++) {
+
+				posX = offset3D(r, p, c, inst->numPerTot__, inst->numDis__);
+				int col = 0;
+				for (int i = 0; i < numRest10; i++) {
+					matTrans[lin][col] = inst->vetRestJanHor__[i].coefMatX[posX];
+					col++;
+				}
+
+				col = 0;
+				for (int i = 0; i < numRest14; i++) {
+					matTrans[lin][col] = inst->vetRest14__[i].coefMatX[posX];
+					col++;
+				}
+
+				col = 0;
+				for (int i = 0; i < numRest15; i++) {
+					matTrans[lin][col] = inst->vetRest15__[i].coefMatX[posX];
+					col++;
+				}
+
+				lin++;
+			}
+		}
+	}
+
+	return matTrans;
+}
+
+void printMatD(Instancia* inst, double** matD) {
+
+	int numX = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
+	int numRest10 = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
+	int numRest14 = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
+	int numRest15 = inst->numSal__ * inst->numDis__;
+	int numRes = numRes + numRest14 + numRest15;
+
+	for (int i = 0; i < numX; i++) {
+		for (int j = 0; j < numRes; j++) {
+			printf("%f;", matD[i][j]);
+		}
+		printf("\n");
+	}
+}
+
+double* montaVetD(Instancia* inst) {
+
+	int numX = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
+	int numRest10 = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
+	int numRest14 = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
+	int numRest15 = inst->numSal__ * inst->numDis__;
+	int numRes = numRest10 + numRest14 + numRest15;
+
+	double* vetD = (double*)malloc(numRes * sizeof(double));
+
+	int posRes10 = 0;
+	int pos = 0;
+	for (int u = 0; u < inst->numTur__; u++) {
+		for (int d = 0; d < inst->numDia__; d++) {
+			int posZ = offset3D(u, d, 0, inst->numDia__, inst->numPerDia__);
+			vetD[pos] = inst->vetRestJanHor__[posRes10].coefMatZ[posZ];
+			posRes10++;
+			pos++;
+		}
+	}
+
+	for (int u = 0; u < inst->numTur__; u++) {
+		for (int d = 0; d < inst->numDia__; d++) {
+			int posZ = offset3D(u, d, 1, inst->numDia__, inst->numPerDia__);
+			vetD[pos] = inst->vetRestJanHor__[posRes10].coefMatZ[posZ];
+			posRes10++;
+			pos++;
+		}
+	}
+
+	for (int s = 2; s < inst->numPerTot__; s++) {
+		for (int u = 0; u < inst->numTur__; u++) {
+			for (int d = 0; d < inst->numDia__; d++) {
+				int posZ = offset3D(u, d, s, inst->numDia__, inst->numPerDia__);
+				vetD[pos] = inst->vetRestJanHor__[posRes10].coefMatZ[posZ];
+				posRes10++;
+				pos++;
+			}
+		}
+	}
+
+	int posRes14 = 0;
+	for (int p = 0; p < inst->numPerTot__; p++) {
+		for (int r = 0; r < inst->numSal__; r++) {
+			for (int c = 0; c < inst->numDis__; c++) {
+				int posY = offset2D(c, r, inst->numSal__);
+				vetD[pos] = inst->vetRest14__[posRes14].coefMatY[posY];
+				posRes14++;
+				pos++;
+			}
+		}
+	}
+
+	int posRes15 = 0;
+	for (int r = 0; r < inst->numSal__; r++) {
+		for (int c = 0; c < inst->numDis__; c++) {
+			int posY = offset2D(c, r, inst->numSal__);
+			vetD[pos] = inst->vetRest15__[posRes15].coefMatY[posY];
+			posRes15++;
+			pos++;
+		}
+	}
+
+	return vetD;
+}
+
+void printVetD(Instancia* inst, double* vetD) {
+
+	int numRest10 = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
+	int numRest14 = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
+	int numRest15 = inst->numSal__ * inst->numDis__;
+	int numRes = numRest10 + numRest14 + numRest15;
+
+	for (int i = 0; i < numRes; i++) {
+		printf("%f\n", vetD[i]);
+	}
+}
+
+void printCoefsFO(Instancia* inst) {
+
+	int posX;
+	for (int p = 0; p < inst->numPerTot__; p++) {
+		for (int r = 0; r < inst->numSal__; r++) {
+			for (int c = 0; c < inst->numDis__; c++) {
+				posX = offset3D(r, p, c, inst->numPerTot__, inst->numDis__);
+				printf("%f,", inst->vetCoefX[posX]);
+			}
+		}
+	}
+}
+
+void escreveCSVDebugCoefs(char* arq, Instancia* inst, double** matD, double* vetD) {
+
+	int numX = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
+
+	int numRest10 = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
+	int numRest14 = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
+	int numRest15 = inst->numSal__ * inst->numDis__;
+	int numRes = numRest10 + numRest14 + numRest15;
+
+	FILE* f = fopen(arq, "w");
+
+	int posX;
+	fprintf(f, "COEFS FO\n");
+	for (int p = 0; p < inst->numPerTot__; p++) {
+		for (int r = 0; r < inst->numSal__; r++) {
+			for (int c = 0; c < inst->numDis__; c++) {
+				posX = offset3D(r, p, c, inst->numPerTot__, inst->numDis__);
+				fprintf(f, "%.6f,", inst->vetCoefX[posX]);
+			}
+		}
+	}
+
+	fprintf(f, "\n\n");
+
+	fprintf(f, "MAT D\n");
+	for (int i = 0; i < numX; i++) {
+		for (int j = 0; j < numRes; j++) {
+			fprintf(f, "%.6f,", matD[i][j]);
+		}
+		fprintf(f, "\n");
+	}
+
+	fprintf(f, "\n\n");
+
+	fprintf(f, "VET D\n");
+	for (int i = 0; i < numRes; i++) {
+		fprintf(f, "%.6f\n", vetD[i]);
+	}
+
+	fclose(f);
+
+	desalocaMatD(matD, numX);
+}
+
+void desalocaMatD(double** matD, int nLin) {
+
+	for (int i = 0; i < nLin; i++) {
+		free(matD[i]);
+	}
+	free(matD);
+}

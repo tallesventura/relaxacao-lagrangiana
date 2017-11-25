@@ -32,6 +32,13 @@ int getViabSalDif15(Solucao* sol, Instancia* inst);
 void getValSol(Solucao *sol, CPXENVptr env, CPXLPptr lp, Instancia* inst);
 void exportarCsv(Solucao* sol, char *arq, Instancia* inst);
 double fRand(double fMin, double fMax);
+double** montaMatD(Instancia* inst);
+void printMatD(Instancia* inst, double** matD);
+double* montaVetD(Instancia* inst);
+void printVetD(Instancia* inst, double* vetD);
+void printCoefsFO(Instancia* inst);
+void escreveCSVDebugCoefs(char* arq, Instancia* inst, double** matD, double* vetD);
+void desalocaMatD(double** matD, int nLin);
 //==============================================================================
 
 #endif
