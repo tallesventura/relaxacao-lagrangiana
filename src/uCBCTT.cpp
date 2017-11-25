@@ -20,8 +20,8 @@
 #define RELAXAR
 //#define ESCREVE_CSV
 
-char INST[50] = "comp";
-//char INST[50] = "toy";
+//char INST[50] = "comp";
+char INST[50] = "toy";
 
 //==============================================================================
 
@@ -31,7 +31,7 @@ int main(int argc, char *argv[])
 	srand(time(NULL));
 	char nomeInst[10];
 	strcpy_s(nomeInst, INST);
-	strcat_s(nomeInst, "01");
+	//strcat_s(nomeInst, "01");
 
 	execUma(nomeInst);
 
