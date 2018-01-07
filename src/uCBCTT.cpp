@@ -20,8 +20,8 @@
 #define RELAXAR
 //#define ESCREVE_CSV
 
-//char INST[50] = "comp";
-char INST[50] = "toy";
+char INST[50] = "comp";
+//char INST[50] = "toy";
 
 //==============================================================================
 
@@ -31,7 +31,7 @@ int main(int argc, char *argv[])
 	srand(time(NULL));
 	char nomeInst[10];
 	strcpy_s(nomeInst, INST);
-	strcat_s(nomeInst, "3");
+	strcat_s(nomeInst, "01");
 
 	execUma(nomeInst);
 
@@ -1153,19 +1153,25 @@ void exportarCsv(Solucao* sol, char *arq, Instancia* inst) {
 double** montaMatD(Instancia* inst) {
 
 	int numX = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
+	int numZ = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
+	int numY = inst->numSal__ * inst->numDis__;
+	int numVar = numX + numY + numZ;
+	printf("X = %d, Z = %d, Y = %d, numVar = %d\n", numX, numZ, numY, numVar);
 	int numRest10 = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
 	int numRest14 = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
 	int numRest15 = inst->numSal__ * inst->numDis__;
 	int numRes = numRest10 + numRest14 + numRest15;
-	int posX;
+	printf("numRest10 = %d, numRest14 = %d, numRest15 = %d, numRes = %d\n", numRest10, numRest14, numRest15, numRes);
+	int posX, posZ, posY;
 
-	double** matTrans = (double**)malloc(numX * sizeof(double*));
-	for (int i = 0; i < numX; i++) {
+	double** matTrans = (double**)malloc(numVar * sizeof(double*));
+	for (int i = 0; i < numVar; i++) {
 		matTrans[i] = (double*)malloc(numRes * sizeof(double));
 	}
 
 	// Transpondo a matriz
 	int lin = 0;
+	// Variáveis X
 	for (int p = 0; p < inst->numPerTot__; p++) {
 		for (int r = 0; r < inst->numSal__; r++) {
 			for (int c = 0; c < inst->numDis__; c++) {
@@ -1177,13 +1183,11 @@ double** montaMatD(Instancia* inst) {
 					col++;
 				}
 
-				col = 0;
 				for (int i = 0; i < numRest14; i++) {
 					matTrans[lin][col] = inst->vetRest14__[i].coefMatX[posX];
 					col++;
 				}
 
-				col = 0;
 				for (int i = 0; i < numRest15; i++) {
 					matTrans[lin][col] = inst->vetRest15__[i].coefMatX[posX];
 					col++;
@@ -1191,6 +1195,59 @@ double** montaMatD(Instancia* inst) {
 
 				lin++;
 			}
+		}
+	}
+
+	// Variáveis Z
+	for (int u = 0; u < inst->numTur__; u++) {
+		for (int d = 0; d < inst->numDia__; d++) {
+			for (int s = 0; s < inst->numPerDia__; s++) {
+
+				posZ = offset3D(u, d, s, inst->numDia__, inst->numPerDia__);
+				int col = 0;
+				for (int i = 0; i < numRest10; i++) {
+					matTrans[lin][col] = inst->vetRestJanHor__[i].coefMatZ[posZ];
+					col++;
+				}
+
+				for (int i = 0; i < numRest14; i++) {
+					matTrans[lin][col] = 0;
+					col++;
+				}
+
+				for (int i = 0; i < numRest15; i++) {
+					matTrans[lin][col] = 0;
+					col++;
+				}
+
+				lin++;
+			}
+		}
+	}
+
+	// Variáveis Y
+	for (int r = 0; r < inst->numSal__; r++) {
+		for (int c = 0; c < inst->numDis__; c++) {
+
+			posY = offset2D(c, r, inst->numSal__);
+
+			int col = 0;
+			for (int i = 0; i < numRest10; i++) {
+				matTrans[lin][col] = 0;
+				col++;
+			}
+
+			for (int i = 0; i < numRest14; i++) {
+				matTrans[lin][col] = inst->vetRest14__[i].coefMatY[posY];
+				col++;
+			}
+
+			for (int i = 0; i < numRest15; i++) {
+				matTrans[lin][col] = inst->vetRest15__[i].coefMatY[posY];
+				col++;
+			}
+
+			lin++;
 		}
 	}
 
@@ -1213,6 +1270,7 @@ void printMatD(Instancia* inst, double** matD) {
 	}
 }
 
+// Lado direito das rstrições
 double* montaVetD(Instancia* inst) {
 
 	int numX = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
@@ -1302,12 +1360,33 @@ void printCoefsFO(Instancia* inst) {
 			}
 		}
 	}
+
+	int posZ;
+	for (int u = 0; u < inst->numTur__; u++) {
+		for (int d = 0; d < inst->numDia__; d++) {
+			for (int s = 0; s < inst->numPerDia__; s++) {
+				posZ = offset3D(u, d, s, inst->numDia__, inst->numPerDia__);
+				printf("%f,", inst->vetCoefZ[posZ]);
+			}
+		}
+	}
+
+	int posY;
+	for (int r = 0; r < inst->numSal__; r++) {
+		for (int c = 0; c < inst->numDis__; c++) {
+			posY = offset2D(c, r, inst->numSal__);
+			printf("%f,", inst->vetCoefY[posY]);
+		}
+	}
+			
 }
 
-void escreveCSVDebugCoefs(char* arq, Instancia* inst, double** matD, double* vetD) {
+void escreveCSVDebugCoefs(char* arq, Instancia* inst, double** matD, double* vetD, double* vetMultRes10, double* vetMultRes14, double* vetMultRes15) {
 
 	int numX = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
-
+	int numZ = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
+	int numY = inst->numSal__ * inst->numDis__;
+	int numVar = numX + numY + numZ;
 	int numRest10 = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
 	int numRest14 = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
 	int numRest15 = inst->numSal__ * inst->numDis__;
@@ -1326,10 +1405,29 @@ void escreveCSVDebugCoefs(char* arq, Instancia* inst, double** matD, double* vet
 		}
 	}
 
+	int posZ;
+	for (int u = 0; u < inst->numTur__; u++) {
+		for (int d = 0; d < inst->numDia__; d++) {
+			for (int s = 0; s < inst->numPerDia__; s++) {
+				posZ = offset3D(u, d, s, inst->numDia__, inst->numPerDia__);
+				fprintf(f, "%.6f,", inst->vetCoefZ[posZ]);
+			}
+		}
+	}
+
+	int posY;
+	for (int r = 0; r < inst->numSal__; r++) {
+		for (int c = 0; c < inst->numDis__; c++) {
+			posY = offset2D(c, r, inst->numSal__);
+			fprintf(f, "%.6f,", inst->vetCoefY[posY]);
+		}
+	}
+
+
 	fprintf(f, "\n\n");
 
 	fprintf(f, "MAT D\n");
-	for (int i = 0; i < numX; i++) {
+	for (int i = 0; i < numVar; i++) {
 		for (int j = 0; j < numRes; j++) {
 			fprintf(f, "%.6f,", matD[i][j]);
 		}
@@ -1338,14 +1436,20 @@ void escreveCSVDebugCoefs(char* arq, Instancia* inst, double** matD, double* vet
 
 	fprintf(f, "\n\n");
 
-	fprintf(f, "VET D\n");
-	for (int i = 0; i < numRes; i++) {
-		fprintf(f, "%.6f\n", vetD[i]);
+	fprintf(f, "VET MULT\n");
+	for (int i = 0; i < numRest10; i++) {
+		fprintf(f, "%.6f\n", vetMultRes10[i]);
+	}
+	for (int i = 0; i < numRest14; i++) {
+		fprintf(f, "%.6f\n", vetMultRes14[i]);
+	}
+	for (int i = 0; i < numRest15; i++) {
+		fprintf(f, "%.6f\n", vetMultRes15[i]);
 	}
 
-	fclose(f);
+	fprintf(f, "\n\n");
 
-	desalocaMatD(matD, numX);
+	fclose(f);
 }
 
 void desalocaMatD(double** matD, int nLin) {
