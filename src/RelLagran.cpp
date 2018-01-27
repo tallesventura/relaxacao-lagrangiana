@@ -41,7 +41,7 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMultRes10, dou
 		calculaFO(solRel, instRel);
 
 		// ==================== DEBUG =============================================================
-		printf("========================================================\n");
+		/*printf("========================================================\n");
 		printCoefsFO(instRel);
 		printf("\n========================================================\n");
 		char dest[50];
@@ -52,7 +52,7 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMultRes10, dou
 		strcat_s(dest, ".csv");
 		printf("%s\n", dest);
 
-		debugaCoeficientes(dest, instRel, solRel, vetMultRes10, vetMultRes14, vetMultRes15);
+		debugaCoeficientes(dest, instRel, solRel, vetMultRes10, vetMultRes14, vetMultRes15);*/
 		// ==================== DEBUG =============================================================
 
 		// Viabilizar a solução
@@ -127,7 +127,7 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMultRes10, dou
 
 		it++;
 
-	} while (eta > 0.005 && it < 3);
+	} while (eta > 0.005);
 
 	return bestSol;
 }
@@ -234,8 +234,6 @@ double* getSubGradRest10(Solucao* sol, Instancia* inst) {
 							coefX2 = inst->vetRestJanHor__[pos].coefMatX[posX2];
 							coefX3 = inst->vetRestJanHor__[pos].coefMatX[posX3];
 							soma += (coefX1 * x1) + (coefX2 * x2) + (coefX3 * x3);
-							soma += sol->vetSol_[offset3D(r, prim, c, inst->numPerTot__, inst->numDis__)] - sol->vetSol_[offset3D(r, seg, c, inst->numPerTot__, inst->numDis__)] -
-								sol->vetSol_[offset3D(r, ter, c, inst->numPerTot__, inst->numDis__)];
 						}
 					}
 				posZ = offset3D(u, d, s, inst->numDia__, inst->numPerDia__);
@@ -302,7 +300,7 @@ double* getSubGradRest15(Solucao* sol, Instancia* inst) {
 
 			double y = sol->vetSolY_[posY];
 			coefY = inst->vetRest15__[pos].coefMatY[posY];
-			vetSubGrad[pos] = soma + (coefX * y);
+			vetSubGrad[pos] = soma + (coefY * y);
 
 			pos++;
 		}

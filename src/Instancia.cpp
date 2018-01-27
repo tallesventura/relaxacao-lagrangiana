@@ -367,23 +367,23 @@ void montaVetCoefXFO(Instancia* inst, double* vetMultRes10, double* vetMultRes14
 				// Coeficientes de x das restrições do tipo 10 (Janela de horário) 
 				double somaR10 = 0;
 				for (int i = 0; i < numRestJanHor; i++) {
-					somaR10 -= inst->vetRestJanHor__[i].coefMatX[posX] * vetMultRes10[i];
+					somaR10 += inst->vetRestJanHor__[i].coefMatX[posX] * vetMultRes10[i];
 				}
 
 				// Coeficientes de x das restrições do tipo 14 (Salas diferentes) 
 				double somaR14 = 0;
 				for (int i = 0; i < numRest14; i++) {
-					somaR14 -= inst->vetRest14__[i].coefMatX[posX] * vetMultRes14[i];
+					somaR14 += inst->vetRest14__[i].coefMatX[posX] * vetMultRes14[i];
 				}
 
 				// Coeficientes de x das restrições do tipo 15 (Salas diferentes) 
 				double somaR15 = 0;
 				for (int i = 0; i < numRest15; i++) {
-					somaR15 -= inst->vetRest15__[i].coefMatX[posX] * vetMultRes15[i];
+					somaR15 += inst->vetRest15__[i].coefMatX[posX] * vetMultRes15[i];
 				}
 
 				//double aux = inst->vetCoefX[posX];
-				inst->vetCoefX[posX] = (PESOS[0] * inst->vetCoefX[posX]) + somaR10 + somaR14 + somaR15;
+				inst->vetCoefX[posX] = (PESOS[0] * inst->vetCoefX[posX]) - somaR10 - somaR14 - somaR15;
 				//printf("Coef x_%d_%d_%d = (%d * %.2f) + %.2f + %.2f + %.2f = %.3f\n",p,r,c,PESOS[0], aux, somaR10,somaR14,somaR15, inst->vetCoefX[posX]);
 
 			}
@@ -408,11 +408,11 @@ void montaVetCoefZFO(Instancia* inst, double* vetMultRes10) {
 				// Coeficientes de z das restrições do tipo 10 (Janela de horário) 
 				double somaR10 = 0;
 				for (int i = 0; i < numRestJanHor; i++) {
-					somaR10 -= inst->vetRestJanHor__[i].coefMatZ[posZ] * vetMultRes10[i];
+					somaR10 += inst->vetRestJanHor__[i].coefMatZ[posZ] * vetMultRes10[i];
 				}
 
 				double aux = inst->vetCoefZ[posZ];
-				inst->vetCoefZ[posZ] = (PESOS[1] * inst->vetCoefZ[posZ]) + somaR10;
+				inst->vetCoefZ[posZ] = (PESOS[1] * inst->vetCoefZ[posZ]) - somaR10;
 				//printf("Coef z_%d_%d_%d = (%d * %.2f) + %.2f = %.3f\n", u, d, s, PESOS[1], aux, somaR10, inst->vetCoefZ[posZ]);
 			}
 		}
@@ -446,17 +446,17 @@ void montaVetCoefYFO(Instancia* inst, double* vetMultRes14, double* vetMultRes15
 			// Coeficientes de y das restrições do tipo 14 (Salas diferentes)
 			double somaR14 = 0;
 			for (int i = 0; i < numRest14; i++) {
-				somaR14 -= inst->vetRest14__[i].coefMatY[posY] * vetMultRes14[i];
+				somaR14 += inst->vetRest14__[i].coefMatY[posY] * vetMultRes14[i];
 			}
 
 			// Coeficientes de y das restrições do tipo 15 (Salas diferentes)
 			double somaR15 = 0;
 			for (int i = 0; i < numRest15; i++) {
-				somaR15 -= inst->vetRest15__[i].coefMatY[posY] * vetMultRes15[i];
+				somaR15 += inst->vetRest15__[i].coefMatY[posY] * vetMultRes15[i];
 			}
 
 			double aux = inst->vetCoefY[posY];
-			inst->vetCoefY[posY] = (PESOS[3] * inst->vetCoefY[posY]) + somaR14 + somaR15;
+			inst->vetCoefY[posY] = (PESOS[3] * inst->vetCoefY[posY]) - somaR14 - somaR15;
 			//printf("Coef y_%d_%d = (%d * %.2f) + %.2f + %.2f = %.3f\n", r,c, PESOS[3], aux, somaR14, somaR15, inst->vetCoefY[posY]);
 		}
 	}
