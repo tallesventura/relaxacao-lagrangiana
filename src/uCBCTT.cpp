@@ -20,8 +20,8 @@
 #define RELAXAR
 //#define ESCREVE_CSV
 
-char INST[50] = "comp";
-//char INST[50] = "toy";
+//char INST[50] = "comp";
+char INST[50] = "toy";
 
 //==============================================================================
 
@@ -31,7 +31,7 @@ int main(int argc, char *argv[])
 	srand(time(NULL));
 	char nomeInst[10];
 	strcpy_s(nomeInst, INST);
-	strcat_s(nomeInst, "01");
+	strcat_s(nomeInst, "3");
 
 	execUma(nomeInst);
 
@@ -1154,8 +1154,9 @@ double** montaMatD(Instancia* inst) {
 
 	int numX = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
 	int numZ = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
+	int numQ = inst->numDis__;
 	int numY = inst->numSal__ * inst->numDis__;
-	int numVar = numX + numY + numZ;
+	int numVar = numX + numY + numZ + numQ;
 	printf("X = %d, Z = %d, Y = %d, numVar = %d\n", numX, numZ, numY, numVar);
 	int numRest10 = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
 	int numRest14 = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
@@ -1223,6 +1224,29 @@ double** montaMatD(Instancia* inst) {
 				lin++;
 			}
 		}
+	}
+
+	// Variáveis Q
+	for (int q = 0; q < numQ; q++) {
+
+		int col = 0;
+
+		for (int i = 0; i < numRest10; i++) {
+			matTrans[lin][col] = 0;
+			col++;
+		}
+
+		for (int i = 0; i < numRest14; i++) {
+			matTrans[lin][col] = 0;
+			col++;
+		}
+
+		for (int i = 0; i < numRest15; i++) {
+			matTrans[lin][col] = 0;
+			col++;
+		}
+
+		lin++;
 	}
 
 	// Variáveis Y
@@ -1381,12 +1405,13 @@ void printCoefsFO(Instancia* inst) {
 			
 }
 
-void escreveCSVDebugCoefs(char* arq, Instancia* inst, double** matD, double* vetD, double* vetMultRes10, double* vetMultRes14, double* vetMultRes15) {
+void escreveCSVDebugCoefs(char* arq, Instancia* inst, Solucao* sol, double** matD, double* vetMultRes10, double* vetMultRes14, double* vetMultRes15) {
 
 	int numX = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
 	int numZ = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
+	int numQ = inst->numDis__;
 	int numY = inst->numSal__ * inst->numDis__;
-	int numVar = numX + numY + numZ;
+	int numVar = numX + numY + numQ + numZ;
 	int numRest10 = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
 	int numRest14 = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
 	int numRest15 = inst->numSal__ * inst->numDis__;
@@ -1394,6 +1419,7 @@ void escreveCSVDebugCoefs(char* arq, Instancia* inst, double** matD, double* vet
 
 	FILE* f = fopen(arq, "w");
 
+	// ----------------------COEFS FO---------------------------------------------
 	int posX;
 	fprintf(f, "COEFS FO\n");
 	for (int p = 0; p < inst->numPerTot__; p++) {
@@ -1415,6 +1441,10 @@ void escreveCSVDebugCoefs(char* arq, Instancia* inst, double** matD, double* vet
 		}
 	}
 
+	for (int q = 0; q < numQ; q++) {
+		fprintf(f, "%.6f,", inst->vetCoefQ[q]);
+	}
+
 	int posY;
 	for (int r = 0; r < inst->numSal__; r++) {
 		for (int c = 0; c < inst->numDis__; c++) {
@@ -1423,6 +1453,42 @@ void escreveCSVDebugCoefs(char* arq, Instancia* inst, double** matD, double* vet
 		}
 	}
 
+	fprintf(f, "%.6f", -1);
+	// --------------------------------------------------------------
+
+	fprintf(f, "\n\n");
+
+	// ------------SOLUÇÃO-------------------------------------------
+	fprintf(f, "SOLUÇÃO\n");
+	for (int p = 0; p < inst->numPerTot__; p++) {
+		for (int r = 0; r < inst->numSal__; r++) {
+			for (int c = 0; c < inst->numDis__; c++) {
+				posX = offset3D(r, p, c, inst->numPerTot__, inst->numDis__);
+				fprintf(f, "%.6f,", sol->vetSol_[posX]);
+			}
+		}
+	}
+
+	for (int u = 0; u < inst->numTur__; u++) {
+		for (int d = 0; d < inst->numDia__; d++) {
+			for (int s = 0; s < inst->numPerDia__; s++) {
+				posZ = offset3D(u, d, s, inst->numDia__, inst->numPerDia__);
+				fprintf(f, "%.6f,", sol->vetSolZ_[posZ]);
+			}
+		}
+	}
+
+	for (int q = 0; q < numQ; q++) {
+		fprintf(f, "%.6f,", sol->vetSolQ_[q]);
+	}
+
+	for (int r = 0; r < inst->numSal__; r++) {
+		for (int c = 0; c < inst->numDis__; c++) {
+			posY = offset2D(c, r, inst->numSal__);
+			fprintf(f, "%.6f,", sol->vetSolY_[posY]);
+		}
+	}
+	// --------------------------------------------------------------
 
 	fprintf(f, "\n\n");
 

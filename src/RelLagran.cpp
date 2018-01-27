@@ -41,7 +41,7 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMultRes10, dou
 		calculaFO(solRel, instRel);
 
 		// ==================== DEBUG =============================================================
-		/*printf("========================================================\n");
+		printf("========================================================\n");
 		printCoefsFO(instRel);
 		printf("\n========================================================\n");
 		char dest[50];
@@ -52,7 +52,7 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMultRes10, dou
 		strcat_s(dest, ".csv");
 		printf("%s\n", dest);
 
-		debugaCoeficientes(dest, instRel, vetMultRes10, vetMultRes14, vetMultRes15);*/
+		debugaCoeficientes(dest, instRel, solRel, vetMultRes10, vetMultRes14, vetMultRes15);
 		// ==================== DEBUG =============================================================
 
 		// Viabilizar a solução
@@ -127,7 +127,7 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMultRes10, dou
 
 		it++;
 
-	} while (eta > 0.005);
+	} while (eta > 0.005 && it < 3);
 
 	return bestSol;
 }
@@ -382,17 +382,17 @@ double* juntaVetsSubGrad(double* vetSubGrad10, double* vetSubGrad14, double* vet
 	return vetFinal;
 }
 
-void debugaCoeficientes(char* arq, Instancia* instRel, double* vetMultRes10, double* vetMultRes14, double* vetMultRes15) {
+void debugaCoeficientes(char* arq, Instancia* instRel, Solucao* sol, double* vetMultRes10, double* vetMultRes14, double* vetMultRes15) {
 	int numX = instRel->numPerTot__ * instRel->numSal__ * instRel->numDis__;
 	int numZ = instRel->numTur__ * instRel->numDia__ * instRel->numPerDia__;
 	int numY = instRel->numSal__ * instRel->numDis__;
 	int numVar = numX + numY + numZ;
 
 	double** matD = montaMatD(instRel);
-	double* vetD = montaVetD(instRel);
-	printVetD(instRel, vetD);
-	escreveCSVDebugCoefs(arq, instRel, matD, vetD, vetMultRes10, vetMultRes14, vetMultRes15);
+	//double* vetD = montaVetD(instRel);
+	//printVetD(instRel, vetD);
+	escreveCSVDebugCoefs(arq, instRel, sol, matD, vetMultRes10, vetMultRes14, vetMultRes15);
 
 	desalocaMatD(matD, numVar);
-	free(vetD);
+	//free(vetD);
 }
