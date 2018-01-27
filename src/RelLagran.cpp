@@ -60,7 +60,7 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMultRes10, dou
 		solViav = clonarSolucao(solRel, instRel);
 		printf("Viabilizando solucao\n");
 		viabilizaSol(solViav, instOrig);
-		calculaFO(solViav, instOrig);
+		calculaFO(solViav, instRel);
 
 		if (solRel->funObj_ > lb) {
 			itSemMelhora = 0;
@@ -79,8 +79,8 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMultRes10, dou
 		printf("lb: MAX(%f, %f) = %f\n", auxLB, solRel->funObj_, lb);
 		printf("ub: MIN(%f, %f) = %f\n", auxUB, solViav->funObj_, ub);
 
-		gap = fabs(ub - lb);
-		printf("gap: %f - %f = %f\n", ub, lb, gap);
+		gap = fabs(ub - lb)/fabs(ub) * 100;
+		printf("gap: %f - %f = %.2f%%\n", ub, lb, gap);
 		if (gap < 1.0) {
 			break;
 		}
@@ -329,11 +329,11 @@ void atualizaMultMenIg(double* vetMult, double passo, double* subGrad, int tamVe
 	for (int i = 0; i < tamVet; i++) {
 		val = vetMult[i];
 		vetMult[i] = MIN(0, val - (passo * subGrad[i]));
-		//printf("MIN(0, %.3f + (%.3f * %.3f))\n", val, passo, subGrad[i]);
+		/*printf("MIN(0, %.3f + (%.3f * %.3f))\n", val, passo, subGrad[i]);
 		if (vetMult[i] > val) {
-			//printf("MAIOR\n");
-			//printf("MENOR\n");
-		}
+			printf("MAIOR\n");
+			printf("MENOR\n");
+		}*/
 	}
 }
 //------------------------------------------------------------------------------
@@ -345,11 +345,11 @@ void atualizaMultMaiIg(double* vetMult, double passo, double* subGrad, int tamVe
 	for (int i = 0; i < tamVet; i++) {
 		val = vetMult[i];
 		vetMult[i] = MAX(0, val - (passo * subGrad[i]));
-		//printf("MAX(0, %.3f + (%.3f * %.3f))\n", val, passo, subGrad[i]);
+		/*printf("MAX(0, %.3f + (%.3f * %.3f))\n", val, passo, subGrad[i]);
 		if (vetMult[i] < val) {
-			//printf("MENOR\n");
-			//printf("MAIOR\n");
-		}
+			printf("MENOR\n");
+			printf("MAIOR\n");
+		}*/
 	}
 }
 //------------------------------------------------------------------------------
