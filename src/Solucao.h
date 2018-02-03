@@ -58,9 +58,11 @@ void escreverSol(Solucao* s, char *arq, Instancia* inst);
 void contaViolacoes(Solucao *s, Instancia* inst);
 void montaSolucao(Solucao *s, Instancia* inst);
 void viabilizaSol(Solucao *s, Instancia* inst);
+void imprimeX(Solucao *sol, Instancia* inst);
 void imprimeZ(Solucao *sol, Instancia* inst);
 void imprimeY(Solucao *sol, Instancia* inst);
 void calculaFO(Solucao *sol, Instancia* inst);
 Solucao* clonarSolucao(Solucao *sol, Instancia* inst);
 void desalocaSolucao(Solucao *s);
+void compararSolucoes(Solucao* solRel, Solucao* solViav, Instancia* inst);
 #endif // Solucao

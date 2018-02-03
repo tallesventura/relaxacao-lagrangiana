@@ -60,5 +60,7 @@ void montaVetCoefQFO(Instancia* inst);
 void montaVetCoefYFO(Instancia* inst, double* vetMultRes14, double* vetMultRes15);
 void montaVetCoefsFO(Instancia* inst, double* vetMultRes10, double* vetMultRes14, double* vetMultRes15);
 void desalocaIntancia(Instancia* inst);
+double** getMatD(Instancia* inst);
+double* getVetD(Instancia* inst);
 
 #endif // !InstanciaH

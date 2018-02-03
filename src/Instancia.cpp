@@ -382,10 +382,10 @@ void montaVetCoefXFO(Instancia* inst, double* vetMultRes10, double* vetMultRes14
 					somaR15 += inst->vetRest15__[i].coefMatX[posX] * vetMultRes15[i];
 				}
 
-				//double aux = inst->vetCoefX[posX];
+				double aux = inst->vetCoefX[posX];
 				inst->vetCoefX[posX] = (PESOS[0] * inst->vetCoefX[posX]) - somaR10 - somaR14 - somaR15;
-				//printf("Coef x_%d_%d_%d = (%d * %.2f) + %.2f + %.2f + %.2f = %.3f\n",p,r,c,PESOS[0], aux, somaR10,somaR14,somaR15, inst->vetCoefX[posX]);
-
+				//printf("Coef x_%d_%d_%d = (%d * %.2f) - %.2f - %.2f - %.2f = %.3f\n",p,r,c,PESOS[0], aux, somaR10,somaR14,somaR15, inst->vetCoefX[posX]);
+				//printf("Coef x_%d_%d_%d = (%d * %.2f) - %.3f = %.3f\n", p, r, c, PESOS[0], aux, somaR10 - somaR14 - somaR15, inst->vetCoefX[posX]);
 			}
 		}
 	}
@@ -413,7 +413,7 @@ void montaVetCoefZFO(Instancia* inst, double* vetMultRes10) {
 
 				double aux = inst->vetCoefZ[posZ];
 				inst->vetCoefZ[posZ] = (PESOS[1] * inst->vetCoefZ[posZ]) - somaR10;
-				//printf("Coef z_%d_%d_%d = (%d * %.2f) + %.2f = %.3f\n", u, d, s, PESOS[1], aux, somaR10, inst->vetCoefZ[posZ]);
+				//printf("Coef z_%d_%d_%d = (%d * %.2f) - %.2f = %.3f\n", u, d, s, PESOS[1], aux, somaR10, inst->vetCoefZ[posZ]);
 			}
 		}
 	}
@@ -457,7 +457,8 @@ void montaVetCoefYFO(Instancia* inst, double* vetMultRes14, double* vetMultRes15
 
 			double aux = inst->vetCoefY[posY];
 			inst->vetCoefY[posY] = (PESOS[3] * inst->vetCoefY[posY]) - somaR14 - somaR15;
-			//printf("Coef y_%d_%d = (%d * %.2f) + %.2f + %.2f = %.3f\n", r,c, PESOS[3], aux, somaR14, somaR15, inst->vetCoefY[posY]);
+			//printf("Coef y_%d_%d = (%d * %.2f) - %.2f - %.2f = %.3f\n", r,c, PESOS[3], aux, somaR14, somaR15, inst->vetCoefY[posY]);
+			//printf("Coef y_%d_%d = (%d * %.2f) - %.3f = %.3f\n", r, c, PESOS[3], aux, somaR14 - somaR15, inst->vetCoefY[posY]);
 		}
 	}
 }

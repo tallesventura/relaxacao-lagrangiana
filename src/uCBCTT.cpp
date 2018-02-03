@@ -20,8 +20,8 @@
 #define RELAXAR
 //#define ESCREVE_CSV
 
-char INST[50] = "comp";
-//char INST[50] = "toy";
+//char INST[50] = "comp";
+char INST[50] = "toy";
 
 //==============================================================================
 
@@ -31,7 +31,7 @@ int main(int argc, char *argv[])
 	srand(time(NULL));
 	char nomeInst[10];
 	strcpy_s(nomeInst, INST);
-	strcat_s(nomeInst, "01");
+	//strcat_s(nomeInst, "3");
 
 	execUma(nomeInst);
 
@@ -625,7 +625,7 @@ void montarModeloRelaxado(char *arq, Instancia* inst, double* vetAlpha, double* 
 	fprintf(f, "- val\n");
 	fprintf(f, "\nST\n");
 	fprintf(f, "\n\\Valor constante\n");
-	fprintf(f, "val = %d\n", val);
+	fprintf(f, "val = %f\n", val);
 
 	fprintf(f, "\n\\ ------------------------------------ HARD------------------------------------\n");
 	fprintf(f, "\n\\R1 - Número de aulas\n");
@@ -1156,7 +1156,7 @@ double** montaMatD(Instancia* inst) {
 	int numZ = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
 	int numQ = inst->numDis__;
 	int numY = inst->numSal__ * inst->numDis__;
-	int numVar = numX + numY + numZ + numQ;
+	int numVar = numX + numY + numZ;
 	printf("X = %d, Z = %d, Y = %d, numVar = %d\n", numX, numZ, numY, numVar);
 	int numRest10 = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
 	int numRest14 = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
@@ -1226,28 +1226,6 @@ double** montaMatD(Instancia* inst) {
 		}
 	}
 
-	// Variáveis Q
-	for (int q = 0; q < numQ; q++) {
-
-		int col = 0;
-
-		for (int i = 0; i < numRest10; i++) {
-			matTrans[lin][col] = 0;
-			col++;
-		}
-
-		for (int i = 0; i < numRest14; i++) {
-			matTrans[lin][col] = 0;
-			col++;
-		}
-
-		for (int i = 0; i < numRest15; i++) {
-			matTrans[lin][col] = 0;
-			col++;
-		}
-
-		lin++;
-	}
 
 	// Variáveis Y
 	for (int r = 0; r < inst->numSal__; r++) {
@@ -1297,7 +1275,6 @@ void printMatD(Instancia* inst, double** matD) {
 // Lado direito das rstrições
 double* montaVetD(Instancia* inst) {
 
-	int numX = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
 	int numRest10 = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
 	int numRest14 = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
 	int numRest15 = inst->numSal__ * inst->numDis__;
@@ -1369,7 +1346,7 @@ void printVetD(Instancia* inst, double* vetD) {
 	int numRes = numRest10 + numRest14 + numRest15;
 
 	for (int i = 0; i < numRes; i++) {
-		printf("%f\n", vetD[i]);
+		printf("%f;	", vetD[i]);
 	}
 }
 
@@ -1405,13 +1382,13 @@ void printCoefsFO(Instancia* inst) {
 			
 }
 
-void escreveCSVDebugCoefs(char* arq, Instancia* inst, Solucao* sol, double** matD, double* vetMultRes10, double* vetMultRes14, double* vetMultRes15) {
+void escreveCSVDebugCoefs(char* arq, Instancia* inst, Solucao* sol, double** matD, double* vetD, double* vetMultRes10, double* vetMultRes14, double* vetMultRes15) {
 
 	int numX = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
 	int numZ = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
 	int numQ = inst->numDis__;
 	int numY = inst->numSal__ * inst->numDis__;
-	int numVar = numX + numY + numQ + numZ;
+	int numVar = numX + numY + numZ;
 	int numRest10 = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
 	int numRest14 = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
 	int numRest15 = inst->numSal__ * inst->numDis__;
@@ -1441,9 +1418,6 @@ void escreveCSVDebugCoefs(char* arq, Instancia* inst, Solucao* sol, double** mat
 		}
 	}
 
-	for (int q = 0; q < numQ; q++) {
-		fprintf(f, "%.6f,", inst->vetCoefQ[q]);
-	}
 
 	int posY;
 	for (int r = 0; r < inst->numSal__; r++) {
@@ -1478,9 +1452,6 @@ void escreveCSVDebugCoefs(char* arq, Instancia* inst, Solucao* sol, double** mat
 		}
 	}
 
-	for (int q = 0; q < numQ; q++) {
-		fprintf(f, "%.6f,", sol->vetSolQ_[q]);
-	}
 
 	for (int r = 0; r < inst->numSal__; r++) {
 		for (int c = 0; c < inst->numDis__; c++) {
@@ -1514,6 +1485,11 @@ void escreveCSVDebugCoefs(char* arq, Instancia* inst, Solucao* sol, double** mat
 	}
 
 	fprintf(f, "\n\n");
+
+	fprintf(f, "VET d\n");
+	for (int i = 0; i < numRes; i++) {
+		fprintf(f, "%.6f\n", vetD[i]);
+	}
 
 	fclose(f);
 }

@@ -16,16 +16,22 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMultRes10, dou
 	double eta = 2.0;
 	double lastFO = -INFINITY;
 
-	double gap;
+	double gap, passo;
 	int numRest10 = instOrig->numTur__ * instOrig->numDia__ * instOrig->numPerDia__;
 	int numRest14 = instOrig->numPerTot__ * instOrig->numSal__ * instOrig->numDis__;
 	int numRest15 = instOrig->numSal__ * instOrig->numDis__;
 	printf("%d, %d, %d", numRest10, numRest14, numRest15);
 
+	double** matD = getMatD(instOrig);
+	double* vetD = getVetD(instOrig);
+
 	int itSemMelhora = 0;
 	int it = 0;
 	
 	printf("\n");
+
+	clock_t h;
+	h = clock();
 
 	do {
 
@@ -38,7 +44,6 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMultRes10, dou
 		printf("Executando CPX\n");
 		solRel = (Solucao*)execCpx(arq, instRel, vetMultRes10, vetMultRes14, vetMultRes15);
 		printf("Calculando FO\n");
-		calculaFO(solRel, instRel);
 
 		// ==================== DEBUG =============================================================
 		/*printf("========================================================\n");
@@ -60,7 +65,7 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMultRes10, dou
 		solViav = clonarSolucao(solRel, instRel);
 		printf("Viabilizando solucao\n");
 		viabilizaSol(solViav, instOrig);
-		calculaFO(solViav, instRel);
+		calculaFO(solViav, instOrig);
 
 		if (solRel->funObj_ > lb) {
 			itSemMelhora = 0;
@@ -75,21 +80,23 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMultRes10, dou
 		lb = MAX(auxLB, solRel->funObj_);
 		double auxUB = ub;
 		ub = MIN(auxUB, solViav->funObj_);
+		//ub = 4356.0;
 
 		printf("lb: MAX(%f, %f) = %f\n", auxLB, solRel->funObj_, lb);
 		printf("ub: MIN(%f, %f) = %f\n", auxUB, solViav->funObj_, ub);
 
-		gap = fabs(ub - lb)/fabs(ub) * 100;
-		printf("gap: %f - %f = %.2f%%\n", ub, lb, gap);
+		gap = fabs(ub - lb);
+		printf("GAP PERCENTUAL: %f%%\n", fabs((lb - ub) / ub) * 100);
+		printf("GAP ESCALAR (ub - lb): %f - %f = %.2f\n", ub, lb, gap);
 		if (gap < 1.0) {
 			break;
 		}
 
 		// Calcular os sub-gradientes
 		printf("Calculando os sub-gradientes\n");
-		double* subGradsRes10 = (double*) getSubGradRest10(solRel, instRel);
-		double* subGradsRes14 = (double*) getSubGradRest14(solRel, instRel);
-		double* subGradsRes15 = (double*) getSubGradRest15(solRel, instRel);
+		double* subGradsRes10 = (double*)getSubGradRest10(solRel, instRel);
+		double* subGradsRes14 = (double*)getSubGradRest14(solRel, instRel);
+		double* subGradsRes15 = (double*)getSubGradRest15(solRel, instRel);
 
 		printf("juntando subgradientes\n");
 		double* vetSubGrads = juntaVetsSubGrad(subGradsRes10, subGradsRes14, subGradsRes15, numRest10, numRest14, numRest15);
@@ -100,7 +107,7 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMultRes10, dou
 
 		printf("calculando o passo\n");
 		// Calcular o passo
-		double passo = calculaPasso(eta, lb, ub, vetSubGrads, numRest10 + numRest14 + numRest15);
+		passo = calculaPasso(eta, lb, ub, vetSubGrads, numRest10 + numRest14 + numRest15);
 
 		printf("atualizando multiplicadores\n");
 		// Atualizar os multiplicadores
@@ -108,13 +115,31 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMultRes10, dou
 		atualizaMultMenIg(vetMultRes14, passo, subGradsRes14, numRest14);
 		atualizaMultMaiIg(vetMultRes15, passo, subGradsRes15, numRest15);
 
+		/*printf("\n---------RES 10----------------\n");
+		for (int i = 0; i < numRest10; i++) {
+			if (vetMultRes10[i] < 0) {
+				printf("%.3f, ", vetMultRes10[i]);
+			}
+		}
+		printf("\n");*/
+
+		/*printf("\n MULTIPLICADORES RES 10\n");
+		printMultiplicadores(vetMultRes10, numRest10);
+		printf("\n MULTIPLICADORES RES 14\n");
+		printMultiplicadores(vetMultRes14, numRest14);
+		printf("\n MULTIPLICADORES RES 15\n");
+		printMultiplicadores(vetMultRes15, numRest15);
+		printf("\n");*/
+
 		printf("FO solRel = %f\n", solRel->funObj_);
 		printf("FO solViav = %f\n", solViav->funObj_);
 		printf("gap = %f\n", gap);
 		printf("eta = %f\n", eta);
 		printf("passo = %f\n", passo);
 		printf("itSemMelhora = %d\n", itSemMelhora);
-		printf("-------------------------------------------\n");
+		//compararSolucoes(solRel, solViav, instOrig);
+		printf("\n");
+		printf("----------------------------------------------------\n");
 
 		lastFO = solRel->funObj_;
 
@@ -126,8 +151,12 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMultRes10, dou
 		free(vetSubGrads);
 
 		it++;
-
+	//} while (gap > 1.0 && passo > 0.0001 && eta > 0.0001);
 	} while (eta > 0.005);
+
+	h = clock() - h;
+	printf("\n=============================\n");
+	printf("TEMPO DE EXECUCAO: %f\n", (double) h / CLOCKS_PER_SEC);
 
 	return bestSol;
 }
@@ -137,7 +166,9 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMultRes10, dou
 void relaxarModelo(char *arq, Instancia* inst, double* vetMultRes10, double* vetMultRes14, double* vetMultRes15) {
 
 	// Conferir
+	printf("Calculando coeficientes\n");
 	montaVetCoefsFO(inst, vetMultRes10, vetMultRes14, vetMultRes15);
+	printf("Escrevendo LP\n");
 	montarModeloRelaxado(arq, inst, vetMultRes10, vetMultRes14, vetMultRes15);
 }
 //------------------------------------------------------------------------------
@@ -387,10 +418,18 @@ void debugaCoeficientes(char* arq, Instancia* instRel, Solucao* sol, double* vet
 	int numVar = numX + numY + numZ;
 
 	double** matD = montaMatD(instRel);
-	//double* vetD = montaVetD(instRel);
-	//printVetD(instRel, vetD);
-	escreveCSVDebugCoefs(arq, instRel, sol, matD, vetMultRes10, vetMultRes14, vetMultRes15);
+	double* vetD = montaVetD(instRel);
+	printf("\n");
+	printVetD(instRel, vetD);
+	escreveCSVDebugCoefs(arq, instRel, sol, matD, vetD, vetMultRes10, vetMultRes14, vetMultRes15);
 
+	free(vetD);
 	desalocaMatD(matD, numVar);
-	//free(vetD);
+}
+
+void printMultiplicadores(double* vet, int tam) {
+
+	for (int i = 0; i < tam; i++) {
+		printf("%.3f, ", vet[i]);
+	}
 }
