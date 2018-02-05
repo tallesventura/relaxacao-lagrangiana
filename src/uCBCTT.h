@@ -34,10 +34,10 @@ void exportarCsv(Solucao* sol, char *arq, Instancia* inst);
 double fRand(double fMin, double fMax);
 double** montaMatD(Instancia* inst);
 void printMatD(Instancia* inst, double** matD);
-double* montaVetD(Instancia* inst);
+double* montaVetD(Instancia* inst, Solucao* sol);
 void printVetD(Instancia* inst, double* vetD);
 void printCoefsFO(Instancia* inst);
-void escreveCSVDebugCoefs(char* arq, Instancia* inst, Solucao* sol, double** matD, double* vetD, double* vetMultRes10, double* vetMultRes14, double* vetMultRes15);
+void escreveCSVDebugCoefs(char* arq, Instancia* inst, Solucao* sol, double** matD, double* vetD, double* vetMultRes10, double* vetMultRes14, double* vetMultRes15, double** matDPura);
 void desalocaMatD(double** matD, int nLin);
 //==============================================================================
 

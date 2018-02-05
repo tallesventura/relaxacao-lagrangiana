@@ -338,11 +338,10 @@ void viabilizaSol(Solucao *s, Instancia* inst) {
 void imprimeX(Solucao *sol, Instancia* inst) {
 
 	int pos = 0;
-	for (int r = 0; r < inst->numTur__; r++) {
-		for (int p = 0; p < inst->numDia__; p++) {
-			for (int c = 0; c < inst->numPerDia__; c++) {
-				//printf("x_%d_%d_%d = %f\n", p, r, c, sol->vetSolZ_[pos]);
-				printf("%.4f; ", sol->vetSol_[pos]);
+	for (int r = 0; r < inst->numSal__; r++) {
+		for (int p = 0; p < inst->numPerTot__; p++) {
+			for (int c = 0; c < inst->numDis__; c++) {
+				printf("x_%d_%d_%d = %.4f\n", p, r, c, sol->vetSol_[pos]);
 				pos++;
 			}
 		}
@@ -357,8 +356,8 @@ void imprimeZ(Solucao *sol, Instancia* inst) {
 	for (int u = 0; u < inst->numTur__; u++) {
 		for (int d = 0; d < inst->numDia__; d++) {
 			for (int s = 0; s < inst->numPerDia__; s++) {
-				//printf("z_%d_%d_%d = %f\n", u, d, s, sol->vetSolZ_[pos]);
-				printf("%.4f; ", sol->vetSolZ_[pos]);
+				printf("z_%d_%d_%d = %f\n", u, d, s, sol->vetSolZ_[pos]);
+				//printf("%.4f; ", sol->vetSolZ_[pos]);
 				pos++;
 			}
 		}
@@ -372,8 +371,8 @@ void imprimeY(Solucao *sol, Instancia* inst) {
 	int pos = 0;
 	for (int c = 0; c < inst->numDis__; c++) {
 		for (int r = 0; r < inst->numSal__; r++) {
-			//printf("y_%d_%d = %f\n", r, c, sol->vetSolY_[pos]);
-			printf("%.4f; ", sol->vetSolY_[pos]);
+			printf("y_%d_%d = %f\n", r, c, sol->vetSolY_[pos]);
+			//printf("%.4f; ", sol->vetSolY_[pos]);
 			pos++;
 		}
 	}

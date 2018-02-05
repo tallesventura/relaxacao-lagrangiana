@@ -31,7 +31,7 @@ int main(int argc, char *argv[])
 	srand(time(NULL));
 	char nomeInst[10];
 	strcpy_s(nomeInst, INST);
-	//strcat_s(nomeInst, "3");
+	strcat_s(nomeInst, "3");
 
 	execUma(nomeInst);
 
@@ -201,6 +201,10 @@ void getValSol(Solucao *sol, CPXENVptr env, CPXLPptr lp, Instancia* inst) {
 	sts = CPXgetmipx(env, lp, sol->vetSolY_, iniY, fimY);
 	// Variáveis v
 	sts = CPXgetmipx(env, lp, sol->vetSolV_, iniV, fimV);
+
+	/*for (int i = 0; i < numX; i++) {
+		printf("%.6f, ", sol->vetSol_[i]);
+	}*/
 }
 //------------------------------------------------------------------------------
 
@@ -214,6 +218,10 @@ Solucao* execCpx(char *arq, Instancia* inst, double* vetMultRes10, double* vetMu
 	CPXLPptr lp;
 	env = CPXopenCPLEX(&sts);
 	sts = CPXsetintparam(env, CPX_PARAM_SCRIND, CPX_OFF);
+
+	// 1 quando tem combinação de valores grandes e pequenos para os coeficientes na matriz de restrições
+	//sts = CPXsetintparam(env, CPXPARAM_Read_Scale, 1);
+	//sts = CPXsetdblparam(env, CPX_PARAM_EPMRK, 0.90);
 	lp = CPXcreateprob(env, &sts, "");
 	sts = CPXreadcopyprob(env, lp, arq, NULL);
 	s->numVar_ = CPXgetnumcols(env, lp);
@@ -1173,8 +1181,8 @@ double** montaMatD(Instancia* inst) {
 	// Transpondo a matriz
 	int lin = 0;
 	// Variáveis X
-	for (int p = 0; p < inst->numPerTot__; p++) {
-		for (int r = 0; r < inst->numSal__; r++) {
+	for (int r = 0; r < inst->numSal__; r++) {
+		for (int p = 0; p < inst->numPerTot__; p++) {
 			for (int c = 0; c < inst->numDis__; c++) {
 
 				posX = offset3D(r, p, c, inst->numPerTot__, inst->numDis__);
@@ -1228,8 +1236,8 @@ double** montaMatD(Instancia* inst) {
 
 
 	// Variáveis Y
-	for (int r = 0; r < inst->numSal__; r++) {
-		for (int c = 0; c < inst->numDis__; c++) {
+	for (int c = 0; c < inst->numDis__; c++) {
+		for (int r = 0; r < inst->numSal__; r++) {
 
 			posY = offset2D(c, r, inst->numSal__);
 
@@ -1262,18 +1270,18 @@ void printMatD(Instancia* inst, double** matD) {
 	int numRest10 = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
 	int numRest14 = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
 	int numRest15 = inst->numSal__ * inst->numDis__;
-	int numRes = numRes + numRest14 + numRest15;
+	int numRes = numRest10 + numRest14 + numRest15;
 
-	for (int i = 0; i < numX; i++) {
-		for (int j = 0; j < numRes; j++) {
-			printf("%f;", matD[i][j]);
+	for (int i = 0; i < numRes; i++) {
+		for (int j = 0; j < numX; j++) {
+			printf("%.3f;", matD[i][j]);
 		}
 		printf("\n");
 	}
 }
 
 // Lado direito das rstrições
-double* montaVetD(Instancia* inst) {
+double* montaVetD(Instancia* inst, Solucao* sol) {
 
 	int numRest10 = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
 	int numRest14 = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
@@ -1287,7 +1295,7 @@ double* montaVetD(Instancia* inst) {
 	for (int u = 0; u < inst->numTur__; u++) {
 		for (int d = 0; d < inst->numDia__; d++) {
 			int posZ = offset3D(u, d, 0, inst->numDia__, inst->numPerDia__);
-			vetD[pos] = inst->vetRestJanHor__[posRes10].coefMatZ[posZ];
+			vetD[pos] = inst->vetRestJanHor__[posRes10].coefMatZ[posZ] * sol->vetSolZ_[posZ];
 			posRes10++;
 			pos++;
 		}
@@ -1296,7 +1304,7 @@ double* montaVetD(Instancia* inst) {
 	for (int u = 0; u < inst->numTur__; u++) {
 		for (int d = 0; d < inst->numDia__; d++) {
 			int posZ = offset3D(u, d, 1, inst->numDia__, inst->numPerDia__);
-			vetD[pos] = inst->vetRestJanHor__[posRes10].coefMatZ[posZ];
+			vetD[pos] = inst->vetRestJanHor__[posRes10].coefMatZ[posZ] * sol->vetSolZ_[posZ];
 			posRes10++;
 			pos++;
 		}
@@ -1306,7 +1314,7 @@ double* montaVetD(Instancia* inst) {
 		for (int u = 0; u < inst->numTur__; u++) {
 			for (int d = 0; d < inst->numDia__; d++) {
 				int posZ = offset3D(u, d, s, inst->numDia__, inst->numPerDia__);
-				vetD[pos] = inst->vetRestJanHor__[posRes10].coefMatZ[posZ];
+				vetD[pos] = inst->vetRestJanHor__[posRes10].coefMatZ[posZ] * sol->vetSolZ_[posZ];
 				posRes10++;
 				pos++;
 			}
@@ -1318,7 +1326,7 @@ double* montaVetD(Instancia* inst) {
 		for (int r = 0; r < inst->numSal__; r++) {
 			for (int c = 0; c < inst->numDis__; c++) {
 				int posY = offset2D(c, r, inst->numSal__);
-				vetD[pos] = inst->vetRest14__[posRes14].coefMatY[posY];
+				vetD[pos] = inst->vetRest14__[posRes14].coefMatY[posY] * sol->vetSolY_[posY];
 				posRes14++;
 				pos++;
 			}
@@ -1329,7 +1337,7 @@ double* montaVetD(Instancia* inst) {
 	for (int r = 0; r < inst->numSal__; r++) {
 		for (int c = 0; c < inst->numDis__; c++) {
 			int posY = offset2D(c, r, inst->numSal__);
-			vetD[pos] = inst->vetRest15__[posRes15].coefMatY[posY];
+			vetD[pos] = inst->vetRest15__[posRes15].coefMatY[posY] * sol->vetSolY_[posY];
 			posRes15++;
 			pos++;
 		}
@@ -1346,7 +1354,7 @@ void printVetD(Instancia* inst, double* vetD) {
 	int numRes = numRest10 + numRest14 + numRest15;
 
 	for (int i = 0; i < numRes; i++) {
-		printf("%f;	", vetD[i]);
+		printf("%f; ", vetD[i]);
 	}
 }
 
@@ -1382,7 +1390,7 @@ void printCoefsFO(Instancia* inst) {
 			
 }
 
-void escreveCSVDebugCoefs(char* arq, Instancia* inst, Solucao* sol, double** matD, double* vetD, double* vetMultRes10, double* vetMultRes14, double* vetMultRes15) {
+void escreveCSVDebugCoefs(char* arq, Instancia* inst, Solucao* sol, double** matD, double* vetD, double* vetMultRes10, double* vetMultRes14, double* vetMultRes15, double** matDPura) {
 
 	int numX = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
 	int numZ = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
@@ -1396,11 +1404,36 @@ void escreveCSVDebugCoefs(char* arq, Instancia* inst, Solucao* sol, double** mat
 
 	FILE* f = fopen(arq, "w");
 
+	// ----------------- NOMES DAS VARIAVEIS -------------------------------------
+	for (int r = 0; r < inst->numSal__; r++) {
+		for (int p = 0; p < inst->numPerTot__; p++) {
+			for (int c = 0; c < inst->numDis__; c++) {
+				fprintf(f, "x_%d_%d_%d,", p,r,c);
+			}
+		}
+	}
+
+	for (int u = 0; u < inst->numTur__; u++) {
+		for (int d = 0; d < inst->numDia__; d++) {
+			for (int s = 0; s < inst->numPerDia__; s++) {
+				fprintf(f, "z_%d_%d_%d,", u,d,s);
+			}
+		}
+	}
+
+	for (int c = 0; c < inst->numDis__; c++) {
+		for (int r = 0; r < inst->numSal__; r++) {
+			fprintf(f, "y_%d_%d,", r,c);
+		}
+	}
+	fprintf(f, "\n\n");
+	// ---------------------------------------------------------------------------
+
 	// ----------------------COEFS FO---------------------------------------------
 	int posX;
 	fprintf(f, "COEFS FO\n");
-	for (int p = 0; p < inst->numPerTot__; p++) {
-		for (int r = 0; r < inst->numSal__; r++) {
+	for (int r = 0; r < inst->numSal__; r++) {
+		for (int p = 0; p < inst->numPerTot__; p++) {
 			for (int c = 0; c < inst->numDis__; c++) {
 				posX = offset3D(r, p, c, inst->numPerTot__, inst->numDis__);
 				fprintf(f, "%.6f,", inst->vetCoefX[posX]);
@@ -1420,22 +1453,22 @@ void escreveCSVDebugCoefs(char* arq, Instancia* inst, Solucao* sol, double** mat
 
 
 	int posY;
-	for (int r = 0; r < inst->numSal__; r++) {
-		for (int c = 0; c < inst->numDis__; c++) {
+	for (int c = 0; c < inst->numDis__; c++) {
+		for (int r = 0; r < inst->numSal__; r++) {
 			posY = offset2D(c, r, inst->numSal__);
 			fprintf(f, "%.6f,", inst->vetCoefY[posY]);
 		}
 	}
 
-	fprintf(f, "%.6f", -1);
+	fprintf(f, "%.6f", -1.0);
 	// --------------------------------------------------------------
 
 	fprintf(f, "\n\n");
 
 	// ------------SOLUÇÃO-------------------------------------------
 	fprintf(f, "SOLUÇÃO\n");
-	for (int p = 0; p < inst->numPerTot__; p++) {
-		for (int r = 0; r < inst->numSal__; r++) {
+	for (int r = 0; r < inst->numSal__; r++) {
+		for (int p = 0; p < inst->numPerTot__; p++) {
 			for (int c = 0; c < inst->numDis__; c++) {
 				posX = offset3D(r, p, c, inst->numPerTot__, inst->numDis__);
 				fprintf(f, "%.6f,", sol->vetSol_[posX]);
@@ -1453,8 +1486,8 @@ void escreveCSVDebugCoefs(char* arq, Instancia* inst, Solucao* sol, double** mat
 	}
 
 
-	for (int r = 0; r < inst->numSal__; r++) {
-		for (int c = 0; c < inst->numDis__; c++) {
+	for (int c = 0; c < inst->numDis__; c++) {
+		for (int r = 0; r < inst->numSal__; r++) {
 			posY = offset2D(c, r, inst->numSal__);
 			fprintf(f, "%.6f,", sol->vetSolY_[posY]);
 		}
@@ -1489,6 +1522,16 @@ void escreveCSVDebugCoefs(char* arq, Instancia* inst, Solucao* sol, double** mat
 	fprintf(f, "VET d\n");
 	for (int i = 0; i < numRes; i++) {
 		fprintf(f, "%.6f\n", vetD[i]);
+	}
+
+	fprintf(f, "\n\n");
+
+	fprintf(f, "MAT D PURA\n");
+	for (int i = 0; i < numRes; i++) {
+		for (int j = 0; j < numX; j++) {
+			fprintf(f, " %.6f,", matDPura[i][j]);
+		}
+		fprintf(f, "\n");
 	}
 
 	fclose(f);

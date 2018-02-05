@@ -493,3 +493,98 @@ void desalocaIntancia(Instancia* inst) {
 	free(inst);
 }
 //------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+double** getMatD(Instancia* inst) {
+
+	int numX = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
+	int numRest10 = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
+	int numRest14 = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
+	int numRest15 = inst->numSal__ * inst->numDis__;
+	int numRes = numRest10 + numRest14 + numRest15;
+
+	double** matD = (double**)malloc(numRes * sizeof(double*));
+	for (int i = 0; i < numRes; i++) {
+		matD[i] = (double*)malloc(numX * sizeof(double));
+	}
+
+	for (int i = 0; i < numRes; i++) {
+		for (int j = 0; j < numX; j++) {
+			matD[i][j] = 0;
+		}
+	}
+
+	int posX;
+	int col = 0;
+	int lin = 0;
+
+	// Restrição 10
+	for (int i = 0; i < numRest10; i++) {
+
+		col = 0;
+		for (int r = 0; r < inst->numSal__; r++) {
+			for (int p = 0; p < inst->numPerTot__; p++) {
+				for (int c = 0; c < inst->numDis__; c++) {
+					posX = offset3D(r, p, c, inst->numPerTot__, inst->numDis__);
+					matD[lin][col] = inst->vetRestJanHor__[i].coefMatX[posX];
+					col++;
+				}
+			}
+		}
+		lin++;
+	}
+
+	// Restrição 14
+	for (int i = 0; i < numRest14; i++) {
+
+		col = 0;
+		for (int r = 0; r < inst->numSal__; r++) {
+			for (int p = 0; p < inst->numPerTot__; p++) {
+				for (int c = 0; c < inst->numDis__; c++) {
+					posX = offset3D(r, p, c, inst->numPerTot__, inst->numDis__);
+					matD[lin][col] = inst->vetRest14__[i].coefMatX[posX];
+					col++;
+				}
+			}
+		}
+		lin++;
+	}
+
+	// Restrição 15
+	for (int i = 0; i < numRest15; i++) {
+
+		col = 0;
+		for (int r = 0; r < inst->numSal__; r++) {
+			for (int p = 0; p < inst->numPerTot__; p++) {
+				for (int c = 0; c < inst->numDis__; c++) {
+					posX = offset3D(r, p, c, inst->numPerTot__, inst->numDis__);
+					matD[lin][col] = inst->vetRest15__[i].coefMatX[posX];
+					col++;
+				}
+			}
+		}
+		lin++;
+	}
+
+
+	return matD;
+}
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+double* getVetD(Instancia* inst) {
+
+	int numRest10 = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
+	int numRest14 = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
+	int numRest15 = inst->numSal__ * inst->numDis__;
+	int numRes = numRest10 + numRest14 + numRest15;
+
+	double* vetD = (double*)malloc(numRes * sizeof(double));
+
+	for (int i = 0; i < numRes; i++) {
+		vetD[i] = 1;
+	}
+
+	return vetD;
+}
+//------------------------------------------------------------------------------
