@@ -1390,7 +1390,7 @@ void printCoefsFO(Instancia* inst) {
 			
 }
 
-void escreveCSVDebugCoefs(char* arq, Instancia* inst, Solucao* sol, double** matD, double* vetD, double* vetMultRes10, double* vetMultRes14, double* vetMultRes15, double** matDPura) {
+void escreveCSVDebugCoefs(char* arq, Instancia* inst, Solucao* sol, double** matD, double* vetD, double* vetMultRes10, double* vetMultRes14, double* vetMultRes15) {
 
 	int numX = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
 	int numZ = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
@@ -1522,16 +1522,6 @@ void escreveCSVDebugCoefs(char* arq, Instancia* inst, Solucao* sol, double** mat
 	fprintf(f, "VET d\n");
 	for (int i = 0; i < numRes; i++) {
 		fprintf(f, "%.6f\n", vetD[i]);
-	}
-
-	fprintf(f, "\n\n");
-
-	fprintf(f, "MAT D PURA\n");
-	for (int i = 0; i < numRes; i++) {
-		for (int j = 0; j < numX; j++) {
-			fprintf(f, " %.6f,", matDPura[i][j]);
-		}
-		fprintf(f, "\n");
 	}
 
 	fclose(f);

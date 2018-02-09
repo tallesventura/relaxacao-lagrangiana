@@ -28,8 +28,4 @@ void atualizaMultMaiIg(double* vetMult, double passo, double* subGrad, int tamVe
 double* juntaVetsSubGrad(double* vetSubGrad10, double* vetSubGrad14, double* vetSubGrad15, int tamSubGra10, int tamSubGra14, int tamSubGra15);
 void debugaCoeficientes(char* arq, Instancia* instRel, Solucao* solRel, double* vetMultRes10, double* vetMultRes14, double* vetMultRes15, double** matD);
 void printMultiplicadores(double* vet, int tam);
-double* getSubgrads(Solucao* sol, Instancia* inst, double** matD, double* vetD);
-double* separaSubgradRes10(double* vetSubgrad, Instancia* inst);
-double* separaSubgradRes14(double* vetSubgrad, Instancia* inst);
-double* separaSubgradRes15(double* vetSubgrad, Instancia* inst);
 #endif // RelLagran
