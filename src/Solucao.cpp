@@ -530,3 +530,13 @@ void compararSolucoes(Solucao* sol1, Solucao* sol2, Instancia* inst) {
 	}
 }
 //------------------------------------------------------------------------------
+
+void escreverResultadosCSV(char* arq, Solucao* s, Instancia* inst, float tempo, float ) {
+
+	FILE* f = fopen(arq, "w");
+
+	
+	
+
+	fclose(f);
+}

@@ -20,8 +20,12 @@
 #define RELAXAR
 //#define ESCREVE_CSV
 
-//char INST[50] = "comp";
-char INST[50] = "toy";
+char INST[50] = "comp";
+//char INST[50] = "toy";
+
+char* NOME_INSTANCIAS[] = { "comp01", "comp02", "comp03", "comp04", "comp05", "comp06", "comp7", "comp08", "comp09", "comp10",
+"comp11", "comp12", "comp13", "comp14", "comp15", "comp16", "comp17", "comp18", "comp19", "comp20",
+"comp21" };
 
 //==============================================================================
 
@@ -31,9 +35,10 @@ int main(int argc, char *argv[])
 	srand(time(NULL));
 	char nomeInst[10];
 	strcpy_s(nomeInst, INST);
-	strcat_s(nomeInst, "3");
+	strcat_s(nomeInst, "01");
 
 	execUma(nomeInst);
+	//execTodas();
 
 	printf("\n\n>>> Pressione ENTER para encerrar: ");
 	_getch();
@@ -61,6 +66,8 @@ void execUma(char* nomeInst) {
 #ifdef RELAXAR
 	int numRest10 = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
 	int numRest14 = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
+	printf("%s\n", aux);
+	printf("numRest14: %d x %d x %d = %d\n", inst->numPerTot__, inst->numSal__, inst->numDis__, numRest14);
 	int numRest15 = inst->numSal__*inst->numDis__;
 
 	printf("Inicializando os vetores de restricoes 10\n");
@@ -75,7 +82,7 @@ void execUma(char* nomeInst) {
 	printf("Montando as matrizes de coeficientes das restricoes de Salas Diferentes\n");
 	montaCoefRestSalDif(inst);
 
-	double* vetMultRes10 = (double*) malloc(numRest10 *sizeof(double));
+	double* vetMultRes10 = (double*) malloc(numRest10 * sizeof(double));
 	double* vetMultRes14 = (double*) malloc(numRest14 * sizeof(double));
 	double* vetMultRes15 = (double*) malloc(numRest15 * sizeof(double));
 
@@ -114,6 +121,16 @@ void execUma(char* nomeInst) {
 	escreverSol(sol, aux, inst);
 	desalocaIntancia(inst);
 	desalocaSolucao(sol);
+	free(vetMultRes10);
+	free(vetMultRes14);
+	free(vetMultRes15);
+}
+
+void execTodas() {
+
+	for (int i = 0; i < NUM_INST; i++) {
+		execUma(NOME_INSTANCIAS[i]);
+	}
 }
 
 //void execTodas() {

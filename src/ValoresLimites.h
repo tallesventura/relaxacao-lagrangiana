@@ -7,7 +7,7 @@
 #define MAX_PRO 135  // 135
 #define MAX_SAL 20   // 20
 #define MAX_DIA 6    // 6
-#define MAX_PER 6    // 6
+#define MAX_PER 9    // 6
 #define MAX_RES 1400 // 1368
 #define MAX_COL 50000
 #define MAX_VAR 71000 //70832

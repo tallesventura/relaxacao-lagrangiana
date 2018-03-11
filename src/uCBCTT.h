@@ -37,7 +37,7 @@ void printMatD(Instancia* inst, double** matD);
 double* montaVetD(Instancia* inst, Solucao* sol);
 void printVetD(Instancia* inst, double* vetD);
 void printCoefsFO(Instancia* inst);
-void escreveCSVDebugCoefs(char* arq, Instancia* inst, Solucao* sol, double** matD, double* vetD, double* vetMultRes10, double* vetMultRes14, double* vetMultRes15, double** matDPura);
+void escreveCSVDebugCoefs(char* arq, Instancia* inst, Solucao* sol, double** matD, double* vetD, double* vetMultRes10, double* vetMultRes14, double* vetMultRes15);
 void desalocaMatD(double** matD, int nLin);
 //==============================================================================
 

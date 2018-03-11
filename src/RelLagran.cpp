@@ -78,6 +78,7 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMultRes10, dou
 		lb = MAX(auxLB, solRel->funObj_);
 		double auxUB = ub;
 		ub = MIN(auxUB, solViav->funObj_);
+		//ub = 5;
 
 		printf("lb: MAX(%f, %f) = %f\n", auxLB, solRel->funObj_, lb);
 		printf("ub: MIN(%f, %f) = %f\n", auxUB, solViav->funObj_, ub);
@@ -97,12 +98,6 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMultRes10, dou
 
 		printf("juntando subgradientes\n");
 		double* vetSubGrads = juntaVetsSubGrad(subGradsRes10, subGradsRes14, subGradsRes15, numRest10, numRest14, numRest15);
-
-
-		for (int i = 0; i < numRest10 + numRest14 + numRest15; i++) {
-			printf("%.4f; ", vetSubGrads[i]);
-		}
-
 
 		if (itSemMelhora != 0 && itSemMelhora % 30 == 0) {
 			eta /= 2;
@@ -125,7 +120,6 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMultRes10, dou
 		printf("eta = %f\n", eta);
 		printf("passo = %f\n", passo);
 		printf("itSemMelhora = %d\n", itSemMelhora);
-		//compararSolucoes(solRel, solViav, instOrig);
 		printf("\n");
 		printf("----------------------------------------------------\n");
 
@@ -139,12 +133,14 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMultRes10, dou
 		free(vetSubGrads);
 
 		it++;
-	//} while (gap > 1.0 && passo > 0.0001 && eta > 0.0001);
-	} while (eta > 0.005 && it < 3);
+	} while (eta > 0.005 && it < 1);
+	//} while (eta > 0.005 && it < 3);
 
 	h = clock() - h;
 	printf("\n=============================\n");
 	printf("TEMPO DE EXECUCAO: %f\n", (double) h / CLOCKS_PER_SEC);
+
+	desalocaSolucao(solViav);
 
 	return bestSol;
 }

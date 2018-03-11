@@ -65,4 +65,5 @@ void calculaFO(Solucao *sol, Instancia* inst);
 Solucao* clonarSolucao(Solucao *sol, Instancia* inst);
 void desalocaSolucao(Solucao *s);
 void compararSolucoes(Solucao* solRel, Solucao* solViav, Instancia* inst);
+void escreverResultadosCSV(char* arq, Solucao* s, Instancia* inst, float tempo, float);
 #endif // Solucao
