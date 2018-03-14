@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
 	srand(time(NULL));
 	char nomeInst[10];
 	strcpy_s(nomeInst, INST);
-	strcat_s(nomeInst, "01");
+	strcat_s(nomeInst, "12");
 
 	execUma(nomeInst);
 	//execTodas();

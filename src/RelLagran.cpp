@@ -14,7 +14,6 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMultRes10, dou
 	double lb = -INFINITY;
 	double ub = INFINITY;
 	double eta = 2.0;
-	double lastFO = -INFINITY;
 
 	double gap, passo;
 	int numRest10 = instOrig->numTur__ * instOrig->numDia__ * instOrig->numPerDia__;
@@ -96,8 +95,6 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMultRes10, dou
 		double* subGradsRes14 = getSubGradRest14(solRel, instRel, rest);
 		double* subGradsRes15 = getSubGradRest15(solRel, instRel, rest);
 
-		printf("juntando subgradientes\n");
-		double* vetSubGrads = juntaVetsSubGrad(subGradsRes10, subGradsRes14, subGradsRes15, numRest10, numRest14, numRest15);
 
 		if (itSemMelhora != 0 && itSemMelhora % 30 == 0) {
 			eta /= 2;
@@ -105,7 +102,7 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMultRes10, dou
 
 		printf("calculando o passo\n");
 		// Calcular o passo
-		passo = calculaPasso(eta, lb, ub, vetSubGrads, numRest10 + numRest14 + numRest15);
+		passo = calculaPasso(eta, lb, ub, subGradsRes10, subGradsRes14, subGradsRes15, instOrig);
 
 		printf("atualizando multiplicadores\n");
 		// Atualizar os multiplicadores
@@ -119,11 +116,10 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMultRes10, dou
 		printf("gap = %f\n", gap);
 		printf("eta = %f\n", eta);
 		printf("passo = %f\n", passo);
+		printf("it = %d\n", it);
 		printf("itSemMelhora = %d\n", itSemMelhora);
 		printf("\n");
 		printf("----------------------------------------------------\n");
-
-		lastFO = solRel->funObj_;
 
 		desalocaIntancia(instRel);
 		desalocaSolucao(solRel);
@@ -131,7 +127,6 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMultRes10, dou
 		free(subGradsRes10);
 		free(subGradsRes14);
 		free(subGradsRes15);
-		free(vetSubGrads);
 
 		it++;
 	} while (eta > 0.005);
@@ -327,11 +322,23 @@ double* getSubGradRest15(Solucao* sol, Instancia* inst, RestricoesRelaxadas* res
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-double calculaPasso(double eta, double lb, double ub, double* vetSubGrad, int tamVet) {
+double calculaPasso(double eta, double lb, double ub, double* subGradsRes10, double* subGradsRes14, double* subGradsRes15, Instancia* inst) {
+
+	int numRest10 = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
+	int numRest14 = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
+	int numRest15 = inst->numSal__ * inst->numDis__;
 
 	double modulo = 0;
-	for (int i = 0; i < tamVet; i++) {
-		modulo += vetSubGrad[i] * vetSubGrad[i];
+	for (int i = 0; i < numRest10; i++) {
+		modulo += subGradsRes10[i] * subGradsRes10[i];
+	}
+
+	for (int i = 0; i < numRest14; i++) {
+		modulo += subGradsRes14[i] * subGradsRes14[i];
+	}
+
+	for (int i = 0; i < numRest15; i++) {
+		modulo += subGradsRes15[i] * subGradsRes15[i];
 	}
 	//printf("MODULO: %f\n", modulo);
 	return (eta * (ub - lb)) / modulo;
