@@ -33,14 +33,17 @@ typedef struct tInstancia {
 	double* vetCoefQ; //Já tem os pesos
 	double* vetCoefY; //Já tem os pesos
 
-	RestJanHor *vetRestJanHor__; // Vetor com as restrições de janela horário
-	RestSalDif *vetRest14__; // Vetor com as restrições do tipo 14 (salas diferentes)
-	RestSalDif *vetRest15__; // Vetor com as restrições do tipo 15 (salas diferentes)
-
 	// ------------ Auxiliares
 	int* matDisTur__; // Dis x Cur; 1 se a disciplina d faz parte do currículo c; 0 caso contrário
 }Instancia;
 //------------------------------------------------------------------------------
+
+
+typedef struct tRestricoesRelaxadas {
+	RestJanHor *vetRestJanHor__;	// Vetor com as restrições de janela horário
+	RestSalDif *vetRest14__;		// Vetor com as restrições do tipo 14 (salas diferentes)
+	RestSalDif *vetRest15__;		// Vetor com as restrições do tipo 15 (salas diferentes)
+}RestricoesRelaxadas;
 
 
 // MÉTODOS =====================================================================
@@ -48,19 +51,19 @@ Instancia* lerInstancia(char *arq);
 void initCoefsFO(Instancia* inst);
 Instancia* clonarInstancia(Instancia* inst);
 void initVetCoefXFO(Instancia* inst);
-void montaCoefRestJanHor(Instancia* inst);
-void montaCoefRestSalDif(Instancia* inst);
+void montaCoefRestJanHor(Instancia* inst, RestricoesRelaxadas* rest);
+void montaCoefRestSalDif(Instancia* inst, RestricoesRelaxadas* rest);
 RestJanHor* getVetJanHor(Instancia* inst, int numRest);
 RestSalDif* getVetSalDif(Instancia *inst, int numRest);
 void initRestSalDif(RestSalDif *rest, Instancia* inst);
 void initRestJanHor(RestJanHor *rest, Instancia* inst);
-void montaVetCoefXFO(Instancia* inst, double* vetMultRes10, double* vetMultRes14, double* vetMultRes15);
-void montaVetCoefZFO(Instancia* inst, double* vetMultRes10);
+void montaVetCoefXFO(Instancia* inst, double* vetMultRes10, double* vetMultRes14, double* vetMultRes15, RestricoesRelaxadas* rest);
+void montaVetCoefZFO(Instancia* inst, double* vetMultRes10, RestricoesRelaxadas* rest);
 void montaVetCoefQFO(Instancia* inst);
-void montaVetCoefYFO(Instancia* inst, double* vetMultRes14, double* vetMultRes15);
-void montaVetCoefsFO(Instancia* inst, double* vetMultRes10, double* vetMultRes14, double* vetMultRes15);
+void montaVetCoefYFO(Instancia* inst, double* vetMultRes14, double* vetMultRes15, RestricoesRelaxadas* rest);
+void montaVetCoefsFO(Instancia* inst, double* vetMultRes10, double* vetMultRes14, double* vetMultRes15, RestricoesRelaxadas* rest);
 void desalocaIntancia(Instancia* inst);
-double** getMatD(Instancia* inst);
+double** getMatD(Instancia* inst, RestricoesRelaxadas* rest);
 double* getVetD(Instancia* inst);
-
+void desalocaRestricoes(RestricoesRelaxadas* rest, Instancia* inst);
 #endif // !InstanciaH
