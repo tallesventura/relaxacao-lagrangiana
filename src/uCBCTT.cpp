@@ -20,8 +20,8 @@
 #define RELAXAR
 //#define ESCREVE_CSV
 
-char INST[50] = "comp";
-//char INST[50] = "toy";
+//char INST[50] = "comp";
+char INST[50] = "toy";
 
 char* NOME_INSTANCIAS[] = { "comp01", "comp02", "comp03", "comp04", "comp05", "comp06", "comp7", "comp08", "comp09", "comp10",
 "comp11", "comp12", "comp13", "comp14", "comp15", "comp16", "comp17", "comp18", "comp19", "comp20",
@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
 	srand(time(NULL));
 	char nomeInst[10];
 	strcpy_s(nomeInst, INST);
-	strcat_s(nomeInst, "12");
+	strcat_s(nomeInst, "3");
 
 	execUma(nomeInst);
 	//execTodas();
@@ -83,6 +83,11 @@ void execUma(char* nomeInst) {
 	montaCoefRestJanHor(inst, rest);
 	printf("Montando as matrizes de coeficientes das restricoes de Salas Diferentes\n");
 	montaCoefRestSalDif(inst, rest);
+
+	printf("Montando as matrizes de coeficientes do CPLEX\n");
+	MatRestCplex* matRestCplex = montaMatRestricoesCplex(rest, inst);
+	imprimeMatRestCplex(matRestCplex, inst);
+	return;
 
 	double* vetMultRes10 = (double*) malloc(numRest10 * sizeof(double));
 	double* vetMultRes14 = (double*) malloc(numRest14 * sizeof(double));

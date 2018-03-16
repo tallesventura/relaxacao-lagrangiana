@@ -9,6 +9,14 @@ int offset2D(int x, int y, int tamY) {
 	return y + (x * tamY);
 }
 
+int offsetZ(int pos, int numX) {
+	return pos + numX;
+}
+
+int offsetY(int pos, int numX, int numZ) {
+	return pos + numX + numZ;
+}
+
 double** getMat2DDouble(int numLin, int numCol, double initVal) {
 
 	double **mat = (double**)malloc(numLin * sizeof(double*));

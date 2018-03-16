@@ -260,11 +260,195 @@ void initVetCoefXFO(Instancia* inst) {
 }
 //------------------------------------------------------------------------------
 
+int contaCoefsNaoNulos(Instancia* inst, RestricoesRelaxadas* rest) {
+
+	int numRest10 = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
+	int numRest14 = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
+	int numRest15 = inst->numSal__*inst->numDis__;
+
+	int numCoefs = 0;
+
+	for (int i = 0; i < numRest10; i++) {
+		numCoefs += rest->vetRestJanHor__[i].numCoefsNaoNulos;
+	}
+	for (int i = 0; i < numRest14; i++) {
+		numCoefs += rest->vetRest14__[i].numCoefsNaoNulos;
+	}
+	for (int i = 0; i < numRest15; i++) {
+		numCoefs += rest->vetRest15__[i].numCoefsNaoNulos;
+	}
+
+	return numCoefs;
+}
+
+MatRestCplex* montaMatRestricoesCplex(RestricoesRelaxadas* rest, Instancia* inst) {
+
+	int numX = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
+	int numZ = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
+	int numY = inst->numSal__ * inst->numDis__;
+	int numVar = numX + numZ + numY;
+
+	int numRest10 = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
+	int numRest14 = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
+	int numRest15 = inst->numSal__*inst->numDis__;
+	int numRest = numRest10 + numRest14 + numRest15;
+
+	MatRestCplex* matRest = (MatRestCplex*)malloc(sizeof(MatRestCplex));
+	matRest->numCoefsTotal = contaCoefsNaoNulos(inst, rest);
+	matRest->numCol = numVar;
+	matRest->numLin = numRest;
+	matRest->matval = (int*)malloc(matRest->numCoefsTotal * sizeof(int));
+	matRest->matbeg = (int*)malloc(numVar * sizeof(int));
+	matRest->matind = (int*)malloc(matRest->numCoefsTotal * sizeof(int));
+	matRest->matcnt = (int*)malloc(numVar * sizeof(int));
+
+	int posX1, posX2, posX3, posZ, posY, coef, col, lin, posVal, countVal;
+	col = lin = posVal = countVal = 0;
+
+	// Coeficientes de X
+	for (int j = 0; j < numX; j++) {
+		matRest->matbeg[col] = posVal;
+		countVal = 0;
+
+		// Rest 10
+		for (int i = 0; i < numRest10; i++) {
+			coef = rest->vetRestJanHor__[i].coefMatX[j];
+
+			if (coef != 0) {
+				matRest->matval[posVal] = coef;
+				matRest->matind[posVal] = lin;
+				posVal++;
+				countVal++;
+			}
+			lin++;
+		}
+
+		// Rest 14
+		for (int i = 0; i < numRest14; i++) {
+			coef = rest->vetRest14__[i].coefMatX[j];
+
+			if (coef != 0) {
+				matRest->matval[posVal] = coef;
+				matRest->matind[posVal] = lin;
+				posVal++;
+				countVal++;
+			}
+			lin++;
+		}
+
+		// Rest 15
+		for (int i = 0; i < numRest15; i++) {
+			coef = rest->vetRest15__[i].coefMatX[j];
+
+			if (coef != 0) {
+				matRest->matval[posVal] = coef;
+				matRest->matind[posVal] = lin;
+				posVal++;
+				countVal++;
+			}
+			lin++;
+		}
+
+		matRest->matcnt[col] = countVal;
+		col++;
+	}
+	lin = 0;
+
+	// Coeficientes de Z
+	for (int j = 0; j < numZ; j++) {
+		matRest->matbeg[col] = posVal;
+		countVal = 0;
+
+		// Rest 10
+		for (int i = 0; i < numRest10; i++) {
+			coef = rest->vetRestJanHor__[i].coefMatZ[j];
+
+			if (coef != 0) {
+				matRest->matval[posVal] = coef;
+				matRest->matind[posVal] = lin;
+				posVal++;
+				countVal++;
+			}
+			lin++;
+		}
+
+		matRest->matcnt[col] = countVal;
+		col++;
+	}
+	lin = 0;
+
+	// Coeficientes de Y
+	for (int j = 0; j < numY; j++) {
+		matRest->matbeg[col] = posVal;
+		countVal = 0;
+
+		// Rest 14
+		for (int i = 0; i < numRest14; i++) {
+			coef = rest->vetRest14__[i].coefMatY[j];
+
+			if (coef != 0) {
+				matRest->matval[posVal] = coef;
+				matRest->matind[posVal] = lin;
+				posVal++;
+				countVal++;
+			}
+			lin++;
+		}
+
+		// Rest 15
+		for (int i = 0; i < numRest15; i++) {
+			coef = rest->vetRest15__[i].coefMatY[j];
+
+			if (coef != 0) {
+				matRest->matval[posVal] = coef;
+				matRest->matind[posVal] = lin;
+				posVal++;
+				countVal++;
+			}
+			lin++;
+		}
+
+		matRest->matcnt[col] = countVal;
+		col++;
+	}
+
+	return matRest;
+}
+
+void imprimeMatRestCplex(MatRestCplex* mat, Instancia* inst) {
+
+	printf("MATBEG:\n");
+	for (int i = 0; i < mat->numCol; i++) {
+		printf("%d; ", mat->matbeg[i]);
+	}
+	printf("\n");
+
+	printf("MATIND:\n");
+	for (int i = 0; i < mat->numCoefsTotal; i++) {
+		printf("%d; ", mat->matind[i]);
+	}
+	printf("\n");
+
+	printf("MATCNT:\n");
+	for (int i = 0; i < mat->numCol; i++) {
+		printf("%d; ", mat->matcnt[i]);
+	}
+	printf("\n");
+
+	printf("MATVAL:\n");
+	for (int i = 0; i < mat->numCoefsTotal; i++) {
+		printf("%d; ", mat->matval[i]);
+	}
+	printf("\n");
+
+}
+
 //------------------------------------------------------------------------------
 void montaCoefRestJanHor(Instancia* inst, RestricoesRelaxadas* rest) {
 
 	int numRest = inst->numTur__*inst->numDia__*inst->numPerDia__;
 	int pos = 0;
+	int numCoefsNaoNulos = 0;
 
 	// Primeiro período do dia
 	for (int u = 0; u < inst->numTur__; u++)
@@ -277,10 +461,14 @@ void montaCoefRestJanHor(Instancia* inst, RestricoesRelaxadas* rest) {
 					for (int r = 0; r < inst->numSal__; r++) {
 						rest->vetRestJanHor__[pos].coefMatX[offset3D(r, d*inst->numPerDia__, c, inst->numPerTot__, inst->numDis__)] = 1;
 						rest->vetRestJanHor__[pos].coefMatX[offset3D(r, d*inst->numPerDia__ + 1, c, inst->numPerTot__, inst->numDis__)] = -1;
+						numCoefsNaoNulos += 2;
 					}
 				}
 			rest->vetRestJanHor__[pos].coefMatZ[offset3D(u, d, 0, inst->numDia__, inst->numPerDia__)] = -1;
+			numCoefsNaoNulos++;
+			rest->vetRestJanHor__[pos].numCoefsNaoNulos = numCoefsNaoNulos;
 			pos++;
+			numCoefsNaoNulos = 0;
 		}
 	}
 
@@ -295,10 +483,14 @@ void montaCoefRestJanHor(Instancia* inst, RestricoesRelaxadas* rest) {
 					for (int r = 0; r < inst->numSal__; r++) {
 						rest->vetRestJanHor__[pos].coefMatX[offset3D(r, (d*inst->numPerDia__) + inst->numPerDia__ - 1, c, inst->numPerTot__, inst->numDis__)] = 1;
 						rest->vetRestJanHor__[pos].coefMatX[offset3D(r, (d*inst->numPerDia__) + inst->numPerDia__ - 2, c, inst->numPerTot__, inst->numDis__)] = -1;
+						numCoefsNaoNulos += 2;
 					}
 				}
 			rest->vetRestJanHor__[pos].coefMatZ[offset3D(u, d, 1, inst->numDia__, inst->numPerDia__)] = -1;
+			numCoefsNaoNulos++;
+			rest->vetRestJanHor__[pos].numCoefsNaoNulos = numCoefsNaoNulos;
 			pos++;
+			numCoefsNaoNulos = 0;
 		}
 	}
 
@@ -316,10 +508,14 @@ void montaCoefRestJanHor(Instancia* inst, RestricoesRelaxadas* rest) {
 							rest->vetRestJanHor__[pos].coefMatX[offset3D(r, (d*inst->numPerDia__) + s - 1, c, inst->numPerTot__, inst->numDis__)] = 1;
 							rest->vetRestJanHor__[pos].coefMatX[offset3D(r, (d*inst->numPerDia__) + s - 2, c, inst->numPerTot__, inst->numDis__)] = -1;
 							rest->vetRestJanHor__[pos].coefMatX[offset3D(r, (d*inst->numPerDia__) + s, c, inst->numPerTot__, inst->numDis__)] = -1;
+							numCoefsNaoNulos += 3;
 						}
 					}
 				rest->vetRestJanHor__[pos].coefMatZ[offset3D(u, d, s, inst->numDia__, inst->numPerDia__)] = -1;
+				numCoefsNaoNulos++;
+				rest->vetRestJanHor__[pos].numCoefsNaoNulos = numCoefsNaoNulos;
 				pos++;
+				numCoefsNaoNulos = 0;
 			}
 		}
 	}
@@ -330,18 +526,24 @@ void montaCoefRestJanHor(Instancia* inst, RestricoesRelaxadas* rest) {
 void montaCoefRestSalDif(Instancia* inst, RestricoesRelaxadas* rest) {
 
 	// Restrição 14
+	int numCoefsNaoNulos = 0;
 	int pos = 0;
 	for (int p = 0; p < inst->numPerTot__; p++) {
 		for (int r = 0; r < inst->numSal__; r++) {
 			for (int c = 0; c < inst->numDis__; c++) {
 				rest->vetRest14__[pos].coefMatX[offset3D(r, p, c, inst->numPerTot__, inst->numDis__)] = 1;
 				rest->vetRest14__[pos].coefMatY[offset2D(c, r, inst->numSal__)] = -1;
+				numCoefsNaoNulos += 2;
+				rest->vetRest14__[pos].numCoefsNaoNulos = numCoefsNaoNulos;
 				pos++;
+				numCoefsNaoNulos = 0;
 			}
 		}
 	}
+	
 
 	// Restrição 15
+	numCoefsNaoNulos = 0;
 	pos = 0;
 	for (int r = 0; r < inst->numSal__; r++)
 	{
@@ -349,9 +551,13 @@ void montaCoefRestSalDif(Instancia* inst, RestricoesRelaxadas* rest) {
 		{
 			for (int p = 0; p < inst->numPerTot__; p++) {
 				rest->vetRest15__[pos].coefMatX[offset3D(r, p, c, inst->numPerTot__, inst->numDis__)] = 1;
+				numCoefsNaoNulos++;
 			}
 			rest->vetRest15__[pos].coefMatY[offset2D(c, r, inst->numSal__)] = -1;
+			numCoefsNaoNulos++;
+			rest->vetRest15__[pos].numCoefsNaoNulos = numCoefsNaoNulos;
 			pos++;
+			numCoefsNaoNulos = 0;
 		}
 	}
 }

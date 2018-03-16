@@ -22,6 +22,7 @@ typedef struct tInstancia {
 	int numRes__;        // número de restrições
 	int numSol__;        // número de colunas
 	int numVar__;        // número de variáveis
+
 	Disciplina* vetDisciplinas__;
 	Turma* vetTurmas__;
 	Professor* vetProfessores__;
@@ -38,13 +39,26 @@ typedef struct tInstancia {
 }Instancia;
 //------------------------------------------------------------------------------
 
-
+//------------------------------------------------------------------------------
 typedef struct tRestricoesRelaxadas {
 	RestJanHor *vetRestJanHor__;	// Vetor com as restrições de janela horário
 	RestSalDif *vetRest14__;		// Vetor com as restrições do tipo 14 (salas diferentes)
 	RestSalDif *vetRest15__;		// Vetor com as restrições do tipo 15 (salas diferentes)
-}RestricoesRelaxadas;
 
+}RestricoesRelaxadas;
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+typedef struct tMatRestCplex {
+	int numCoefsTotal;	// Número total de coeficientes nao nulos (somatório de matcnt)
+	int numCol;			// Número de colunas (variáveis X, Z e Y)
+	int numLin;			// Número de linhas (restrições 10, 14 e 15)
+	int* matind;
+	int* matbeg;
+	int* matcnt;
+	int* matval;
+}MatRestCplex;
+//------------------------------------------------------------------------------
 
 // MÉTODOS =====================================================================
 Instancia* lerInstancia(char *arq);
@@ -66,4 +80,6 @@ void desalocaIntancia(Instancia* inst);
 double** getMatD(Instancia* inst, RestricoesRelaxadas* rest);
 double* getVetD(Instancia* inst);
 void desalocaRestricoes(RestricoesRelaxadas* rest, Instancia* inst);
+MatRestCplex* montaMatRestricoesCplex(RestricoesRelaxadas* rest, Instancia* inst);
+void imprimeMatRestCplex(MatRestCplex* mat, Instancia* inst);
 #endif // !InstanciaH
