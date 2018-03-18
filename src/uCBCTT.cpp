@@ -86,8 +86,6 @@ void execUma(char* nomeInst) {
 
 	printf("Montando as matrizes de coeficientes do CPLEX\n");
 	MatRestCplex* matRestCplex = montaMatRestricoesCplex(rest, inst);
-	imprimeMatRestCplex(matRestCplex, inst);
-	return;
 
 	double* vetMultRes10 = (double*) malloc(numRest10 * sizeof(double));
 	double* vetMultRes14 = (double*) malloc(numRest14 * sizeof(double));
@@ -129,6 +127,7 @@ void execUma(char* nomeInst) {
 	desalocaIntancia(inst);
 	desalocaSolucao(sol);
 	desalocaRestricoes(rest, inst);
+	desalocaMatRestCplex(matRestCplex);
 	free(vetMultRes10);
 	free(vetMultRes14);
 	free(vetMultRes15);

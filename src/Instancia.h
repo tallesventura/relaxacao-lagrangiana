@@ -82,4 +82,5 @@ double* getVetD(Instancia* inst);
 void desalocaRestricoes(RestricoesRelaxadas* rest, Instancia* inst);
 MatRestCplex* montaMatRestricoesCplex(RestricoesRelaxadas* rest, Instancia* inst);
 void imprimeMatRestCplex(MatRestCplex* mat, Instancia* inst);
+void desalocaMatRestCplex(MatRestCplex* mat);
 #endif // !InstanciaH

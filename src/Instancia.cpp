@@ -309,6 +309,7 @@ MatRestCplex* montaMatRestricoesCplex(RestricoesRelaxadas* rest, Instancia* inst
 	for (int j = 0; j < numX; j++) {
 		matRest->matbeg[col] = posVal;
 		countVal = 0;
+		lin = 0;
 
 		// Rest 10
 		for (int i = 0; i < numRest10; i++) {
@@ -352,12 +353,12 @@ MatRestCplex* montaMatRestricoesCplex(RestricoesRelaxadas* rest, Instancia* inst
 		matRest->matcnt[col] = countVal;
 		col++;
 	}
-	lin = 0;
 
 	// Coeficientes de Z
 	for (int j = 0; j < numZ; j++) {
 		matRest->matbeg[col] = posVal;
 		countVal = 0;
+		lin = 0;
 
 		// Rest 10
 		for (int i = 0; i < numRest10; i++) {
@@ -375,12 +376,12 @@ MatRestCplex* montaMatRestricoesCplex(RestricoesRelaxadas* rest, Instancia* inst
 		matRest->matcnt[col] = countVal;
 		col++;
 	}
-	lin = 0;
 
 	// Coeficientes de Y
 	for (int j = 0; j < numY; j++) {
 		matRest->matbeg[col] = posVal;
 		countVal = 0;
+		lin = numRest10;
 
 		// Rest 14
 		for (int i = 0; i < numRest14; i++) {
@@ -413,6 +414,15 @@ MatRestCplex* montaMatRestricoesCplex(RestricoesRelaxadas* rest, Instancia* inst
 	}
 
 	return matRest;
+}
+
+void desalocaMatRestCplex(MatRestCplex* mat) {
+
+	free(mat->matbeg);
+	free(mat->matcnt);
+	free(mat->matind);
+	free(mat->matval);
+	free(mat);
 }
 
 void imprimeMatRestCplex(MatRestCplex* mat, Instancia* inst) {
