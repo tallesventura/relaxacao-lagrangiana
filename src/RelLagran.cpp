@@ -7,7 +7,7 @@
 #include <string.h>
 
 //------------------------------------------------------------------------------
-Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMultRes10, double* vetMultRes14, double* vetMultRes15, RestricoesRelaxadas* rest) {
+Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMult, MatRestCplex* rest) {
 
 	Solucao *solRel, *solViav, *bestSol;
 	Instancia* instRel;
@@ -37,9 +37,9 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMultRes10, dou
 
 		// Resolver o problema relaxado
 		printf("Relaxando o modelo\n");
-		relaxarModelo(arq, instRel, vetMultRes10, vetMultRes14, vetMultRes15, rest);
+		relaxarModelo(arq, instRel, vetMult, rest);
 		printf("Executando CPX\n");
-		solRel = (Solucao*)execCpx(arq, instRel, vetMultRes10, vetMultRes14, vetMultRes15);
+		solRel = (Solucao*)execCpx(arq, instRel);
 		printf("\n");
 
 		// ==================== DEBUG =============================================================
@@ -91,9 +91,7 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMultRes10, dou
 
 		// Calcular os sub-gradientes
 		printf("Calculando os sub-gradientes\n");
-		double* subGradsRes10 = getSubGradRest10(solRel, instRel, rest);
-		double* subGradsRes14 = getSubGradRest14(solRel, instRel, rest);
-		double* subGradsRes15 = getSubGradRest15(solRel, instRel, rest);
+		double* subGrads = getSubGrads(solRel, instRel, rest);
 
 
 		if (itSemMelhora != 0 && itSemMelhora % 30 == 0) {
@@ -102,13 +100,11 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMultRes10, dou
 
 		printf("calculando o passo\n");
 		// Calcular o passo
-		passo = calculaPasso(eta, lb, ub, subGradsRes10, subGradsRes14, subGradsRes15, instOrig);
+		passo = calculaPasso(eta, lb, ub, subGrads, instOrig);
 
 		printf("atualizando multiplicadores\n");
 		// Atualizar os multiplicadores
-		atualizaMultMenIg(vetMultRes10, passo, subGradsRes10, numRest10);
-		atualizaMultMenIg(vetMultRes14, passo, subGradsRes14, numRest14);
-		atualizaMultMaiIg(vetMultRes15, passo, subGradsRes15, numRest15);
+		atualizaMultiplicadores(instOrig, vetMult, passo, subGrads);
 
 
 		printf("FO solRel = %f\n", solRel->funObj_);
@@ -124,9 +120,7 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMultRes10, dou
 		desalocaIntancia(instRel);
 		desalocaSolucao(solRel);
 		desalocaSolucao(solViav);
-		free(subGradsRes10);
-		free(subGradsRes14);
-		free(subGradsRes15);
+		free(subGrads);
 
 		it++;
 	} while (eta > 0.005);
@@ -141,121 +135,68 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMultRes10, dou
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-void relaxarModelo(char *arq, Instancia* inst, double* vetMultRes10, double* vetMultRes14, double* vetMultRes15, RestricoesRelaxadas* rest) {
+void relaxarModelo(char *arq, Instancia* inst, double* vetMult, MatRestCplex* rest) {
 
 	printf("Calculando coeficientes\n");
-	montaVetCoefsFO(inst, vetMultRes10, vetMultRes14, vetMultRes15, rest);
+	montaVetCoefsFO(inst, vetMult, rest);
 	printf("Escrevendo LP\n");
-	montarModeloRelaxado(arq, inst, vetMultRes10, vetMultRes14, vetMultRes15);
+	montarModeloRelaxado(arq, inst);
 }
 //------------------------------------------------------------------------------
 
-//------------------------------------------------------------------------------
-double* getSubGradRest10(Solucao* sol, Instancia* inst, RestricoesRelaxadas* rest) {
+double* getSubGrads(Solucao* sol, Instancia* inst, MatRestCplex* rest) {
 
-	int numRest10 = inst->numTur__*inst->numDia__*inst->numPerDia__;
-	double* vetSubGrad = (double*)malloc(numRest10 * sizeof(double));
+	int numX = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
+	int numZ = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
+	int numY = inst->numSal__ + inst->numDis__;
+	int numRest10 = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
+	int numRest14 = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
+	int numRest15 = inst->numSal__ * inst->numDis__;
+	int numRest = numRest10 + numRest14 + numRest15;
+	int col, posZ, posY;
 
-	double soma;
-	double x1, x2, x3, coefX1, coefX2, coefX3;
-	int posX1, posX2, posX3, posZ;
-	int pos = 0;
-	for (int u = 0; u < inst->numTur__; u++)
-	{
-		for (int d = 0; d < inst->numDia__; d++)
-		{
-			double soma = 0;
-			for (int c = 0; c < inst->numDis__; c++)
-				if (inst->matDisTur__[offset2D(c, u, inst->numTur__)] == 1)
-				{
-					for (int r = 0; r < inst->numSal__; r++) {
-						int prim = d*inst->numPerDia__;
-						int seg = (d*inst->numPerDia__) + 1;
-						posX1 = offset3D(r, prim, c, inst->numPerTot__, inst->numDis__);
-						posX2 = offset3D(r, seg, c, inst->numPerTot__, inst->numDis__);
-						x1 = sol->vetSol_[posX1];
-						x2 = sol->vetSol_[posX2];
-						coefX1 = rest->vetRestJanHor__[pos].coefMatX[posX1];
-						coefX2 = rest->vetRestJanHor__[pos].coefMatX[posX2];
-						soma += (coefX1 * x1) + (coefX2 * x2);
-					}
-				}
-			posZ = offset3D(u, d, 0, inst->numDia__, inst->numPerDia__);
-			double z = sol->vetSolZ_[posZ];
-			double coefZ = rest->vetRestJanHor__[pos].coefMatZ[posZ];
-			vetSubGrad[pos] = soma + (coefZ * z);
-			//printf("R10 pos %d: %f + (%.4f * %.4f) = %.4f\n", pos, soma, coefZ, z, vetSubGrad[pos]);
+	double* vetSubGrads = (double*)malloc((numRest10 + numRest14 + numRest15) * sizeof(double));
 
-			pos++;
-		}
+	for (int i = 0; i < numRest; i++) {
+		vetSubGrads[i] = 0;
 	}
 
-	for (int u = 0; u < inst->numTur__; u++)
-	{
-		for (int d = 0; d < inst->numDia__; d++)
-		{
-			double soma = 0;
-			for (int c = 0; c < inst->numDis__; c++)
-				if (inst->matDisTur__[offset2D(c, u, inst->numTur__)] == 1)
-				{
-					for (int r = 0; r < inst->numSal__; r++) {
-						int prim = (d*inst->numPerDia__) + inst->numPerDia__ - 1;
-						int seg = (d*inst->numPerDia__) + inst->numPerDia__ - 2;
-						posX1 = offset3D(r, prim, c, inst->numPerTot__, inst->numDis__);
-						posX2 = offset3D(r, seg, c, inst->numPerTot__, inst->numDis__);
-						x1 = sol->vetSol_[posX1];
-						x2 = sol->vetSol_[posX2];
-						coefX1 = rest->vetRestJanHor__[pos].coefMatX[posX1];
-						coefX2 = rest->vetRestJanHor__[pos].coefMatX[posX2];
-						soma += (coefX1 * x1) + (coefX2 * x2);
-					}
+	for (int lin = 0; lin < numRest; lin++) {
+		for (int i = 0; i < rest->numCoefsTotal; i++) {
+			if (rest->matind[i] == lin) {
+				col = findCol(i, rest);
+				if (col < numX) {
+					vetSubGrads[lin] += rest->matval[i] * sol->vetSol_[col];
 				}
-			posZ = offset3D(u, d, 1, inst->numDia__, inst->numPerDia__);
-			double z = sol->vetSolZ_[posZ];
-			double coefZ = rest->vetRestJanHor__[pos].coefMatZ[posZ];
-			vetSubGrad[pos] = soma + (coefZ * z);
-			//printf("R10 pos %d: %f + (%.4f * %.4f) = %.4f\n", pos, soma, coefZ, z, vetSubGrad[pos]);
-			pos++;
-		}
-	}
-
-	for (int s = 2; s < inst->numPerDia__; s++)
-	{
-		for (int u = 0; u < inst->numTur__; u++)
-		{
-			for (int d = 0; d < inst->numDia__; d++)
-			{
-				double soma = 0;
-				for (int c = 0; c < inst->numDis__; c++)
-					if (inst->matDisTur__[offset2D(c, u, inst->numTur__)] == 1)
-					{
-						for (int r = 0; r < inst->numSal__; r++) {
-							int prim = (d*inst->numPerDia__) + s - 1;
-							int seg = (d*inst->numPerDia__) + s - 2;
-							int ter = (d*inst->numPerDia__) + s;
-							posX1 = offset3D(r, prim, c, inst->numPerTot__, inst->numDis__);
-							posX2 = offset3D(r, seg, c, inst->numPerTot__, inst->numDis__);
-							posX3 = offset3D(r, ter, c, inst->numPerTot__, inst->numDis__);
-							x1 = sol->vetSol_[posX1];
-							x2 = sol->vetSol_[posX2];
-							x3 = sol->vetSol_[posX3];
-							coefX1 = rest->vetRestJanHor__[pos].coefMatX[posX1];
-							coefX2 = rest->vetRestJanHor__[pos].coefMatX[posX2];
-							coefX3 = rest->vetRestJanHor__[pos].coefMatX[posX3];
-							soma += (coefX1 * x1) + (coefX2 * x2) + (coefX3 * x3);
-						}
-					}
-				posZ = offset3D(u, d, s, inst->numDia__, inst->numPerDia__);
-				double z = sol->vetSolZ_[posZ];
-				double coefZ = rest->vetRestJanHor__[pos].coefMatZ[posZ];
-				vetSubGrad[pos] = soma + (coefZ * z);
-				//printf("R10 pos %d: %f + (%.4f * %.4f) = %.4f\n", pos, soma, coefZ, z, vetSubGrad[pos]);
-				pos++;
+				else if (col < numX + numZ) {
+					posZ = col - numX;
+					vetSubGrads[lin] += rest->matval[i] * sol->vetSolZ_[posZ];
+				}
+				else {
+					posY = col - numX - numZ;
+					vetSubGrads[lin] += rest->matval[i] * sol->vetSolZ_[posY];
+				}
 			}
 		}
 	}
 
-	return vetSubGrad;
+	return vetSubGrads;
+}
+
+//------------------------------------------------------------------------------
+void initSubGradRest10(Solucao* sol, Instancia* inst, MatRestCplex* rest, double* vetSubGrads) {
+
+	int numX = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
+	int numZ = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
+	int numY = inst->numSal__ * inst->numDis__;
+	int numVar = numX + numY + numZ;
+	int numRest10 = inst->numTur__*inst->numDia__*inst->numPerDia__;
+
+	for (int lin = 0; lin < numRest10; lin++) {
+		for (int col = 0; col < numVar; col++) {
+
+		}
+	}
 }
 //------------------------------------------------------------------------------
 
@@ -322,24 +263,18 @@ double* getSubGradRest15(Solucao* sol, Instancia* inst, RestricoesRelaxadas* res
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-double calculaPasso(double eta, double lb, double ub, double* subGradsRes10, double* subGradsRes14, double* subGradsRes15, Instancia* inst) {
+double calculaPasso(double eta, double lb, double ub, double* subGrads, Instancia* inst) {
 
 	int numRest10 = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
 	int numRest14 = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
 	int numRest15 = inst->numSal__ * inst->numDis__;
+	int numRest = numRest10 + numRest14 + numRest15;
 
 	double modulo = 0;
-	for (int i = 0; i < numRest10; i++) {
-		modulo += subGradsRes10[i] * subGradsRes10[i];
+	for (int i = 0; i < numRest; i++) {
+		modulo += subGrads[i] * subGrads[i];
 	}
 
-	for (int i = 0; i < numRest14; i++) {
-		modulo += subGradsRes14[i] * subGradsRes14[i];
-	}
-
-	for (int i = 0; i < numRest15; i++) {
-		modulo += subGradsRes15[i] * subGradsRes15[i];
-	}
 	//printf("MODULO: %f\n", modulo);
 	return (eta * (ub - lb)) / modulo;
 }
@@ -376,6 +311,32 @@ void atualizaMultMaiIg(double* vetMult, double passo, double* subGrad, int tamVe
 	}
 }
 //------------------------------------------------------------------------------
+
+void atualizaMultiplicadores(Instancia* inst, double* vetMult, double passo, double* subGrads) {
+
+	int numRest10 = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
+	int numRest14 = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
+	int numRest15 = inst->numSal__ * inst->numDis__;
+	int numRest = numRest10 + numRest14 + numRest15;
+
+	double val;
+
+	for (int i = 0; i < numRest10; i++) {
+		val = vetMult[i];
+		vetMult[i] = MIN(0, val - (passo * subGrads[i]));
+	}
+
+	for (int i = numRest10; i < numRest10 + numRest14; i++) {
+		val = vetMult[i];
+		vetMult[i] = MIN(0, val - (passo * subGrads[i]));
+	}
+
+	for (int i = numRest10 + numRest14; i < numRest; i++) {
+		val = vetMult[i];
+		vetMult[i] = MAX(0, val - (passo * subGrads[i]));
+	}
+
+}
 
 //------------------------------------------------------------------------------
 

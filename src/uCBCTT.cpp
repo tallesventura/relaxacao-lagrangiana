@@ -66,48 +66,43 @@ void execUma(char* nomeInst) {
 #ifdef RELAXAR
 	int numRest10 = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
 	int numRest14 = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
-	printf("%s\n", aux);
-	printf("numRest14: %d x %d x %d = %d\n", inst->numPerTot__, inst->numSal__, inst->numDis__, numRest14);
 	int numRest15 = inst->numSal__*inst->numDis__;
+	int numRest = numRest + numRest14 + numRest15;
+	int numX = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
+	int numZ = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
+	int numY = inst->numSal__ * inst->numDis__;
+	printf("numX = %d; numZ = %d; numY = %d; total = %d\n", numX, numZ, numY, numX + numZ + numY);
 
-	RestricoesRelaxadas* rest = (RestricoesRelaxadas*)malloc(sizeof(RestricoesRelaxadas));
+	RestricoesRelaxadas* restRel = (RestricoesRelaxadas*)malloc(sizeof(RestricoesRelaxadas));
 
 	printf("Inicializando os vetores de restricoes 10\n");
-	rest->vetRestJanHor__ =  getVetJanHor(inst, numRest10);
+	restRel->vetRestJanHor__ =  getVetJanHor(inst, numRest10);
 	printf("Inicializando os vetores de restricoes 14\n");
-	rest->vetRest14__ = getVetSalDif(inst, numRest14);
+	restRel->vetRest14__ = getVetSalDif(inst, numRest14);
 	printf("Inicializando os vetores de restricoes 15\n");
-	rest->vetRest15__ = getVetSalDif(inst, numRest15);
+	restRel->vetRest15__ = getVetSalDif(inst, numRest15);
 
 	printf("Montando as matrizes de coeficientes das restricoes de Janela Horario\n");
-	montaCoefRestJanHor(inst, rest);
+	montaCoefRestJanHor(inst, restRel);
 	printf("Montando as matrizes de coeficientes das restricoes de Salas Diferentes\n");
-	montaCoefRestSalDif(inst, rest);
+	montaCoefRestSalDif(inst, restRel);
 
 	printf("Montando as matrizes de coeficientes do CPLEX\n");
-	MatRestCplex* matRestCplex = montaMatRestricoesCplex(rest, inst);
+	MatRestCplex* matRestCplex = montaMatRestricoesCplex(restRel, inst);
 
-	double* vetMultRes10 = (double*) malloc(numRest10 * sizeof(double));
-	double* vetMultRes14 = (double*) malloc(numRest14 * sizeof(double));
-	double* vetMultRes15 = (double*) malloc(numRest15 * sizeof(double));
+	desalocaRestricoes(restRel, inst);
 
-	printf("Inicializando vetor de multiplicadores das restricoes 10\n");
-	initMultiplicadores(vetMultRes10, numRest10, VAL_INIT_ALPHA);
-	printf("Inicializando vetor de multiplicadores das restricoes 14\n");
-	initMultiplicadores(vetMultRes14, numRest14, VAL_INIT_RES_14);
-	printf("Inicializando vetor de multiplicadores das restricoes 15\n");
-	initMultiplicadores(vetMultRes15, numRest15, VAL_INIT_RES_15);
+	printf("Inicializando vetor de multiplicadores\n");
+	double* vetMult = (double*)malloc(numRest * sizeof(double));
+	initMultiplicadores(vetMult, numRest, VAL_INIT_ALPHA);
 
 	// Sem relaxacao
 	//montarModeloPLI(aux, inst);
-	
-	//montaVetCoefsFO(inst, vetMultRes10, vetMultRes14, vetMultRes15);
-	//montarModeloRelaxado(aux, inst, vetMultRes10, vetMultRes14, vetMultRes15);
 #else
 	montarModeloPLI(aux, inst);
 #endif
 	printf("Executando Relaxacao Lagrangiana\n");
-	sol = execRelLagran(aux, inst, vetMultRes10, vetMultRes14, vetMultRes15, rest);
+	sol = execRelLagran(aux, inst, vetMult, matRestCplex);
 	//sol = execCpx(aux, inst, vetMultRes10, vetMultRes14, vetMultRes15);
 	calculaFO(sol, inst);
 	strcpy_s(aux, PATH_INST);
@@ -126,11 +121,8 @@ void execUma(char* nomeInst) {
 	escreverSol(sol, aux, inst);
 	desalocaIntancia(inst);
 	desalocaSolucao(sol);
-	desalocaRestricoes(rest, inst);
 	desalocaMatRestCplex(matRestCplex);
-	free(vetMultRes10);
-	free(vetMultRes14);
-	free(vetMultRes15);
+	free(vetMult);
 }
 
 void execTodas() {
@@ -233,7 +225,7 @@ void getValSol(Solucao *sol, CPXENVptr env, CPXLPptr lp, Instancia* inst) {
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-Solucao* execCpx(char *arq, Instancia* inst, double* vetMultRes10, double* vetMultRes14, double* vetMultRes15)
+Solucao* execCpx(char *arq, Instancia* inst)
 {
 	int sts;
 	Solucao* s = (Solucao*) malloc(sizeof(Solucao));
@@ -577,7 +569,7 @@ void initMultiplicadores(double* vetMult, int tam, double val) {
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-void montarModeloRelaxado(char *arq, Instancia* inst, double* vetAlpha, double* vetMultRes14, double* vetMultRes15) {
+void montarModeloRelaxado(char *arq, Instancia* inst) {
 
 	FILE *f = fopen(arq, "w");
 

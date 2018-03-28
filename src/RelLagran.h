@@ -17,15 +17,17 @@
 
 // MÉTODOS ===================================================================================
 
-Solucao* execRelLagran(char* arq, Instancia* inst, double* vetMultRes10, double* vetMultRes14, double* vetMultRes15, RestricoesRelaxadas* rest);
-void relaxarModelo(char *arq, Instancia* inst, double* vetMultRes10, double* vetMultRes14, double* vetMultRes15, RestricoesRelaxadas* rest);
-double* getSubGradRest10(Solucao* sol, Instancia* inst, RestricoesRelaxadas* rest);
+Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMult, MatRestCplex* rest);
+void relaxarModelo(char *arq, Instancia* inst, double* vetMultRes, MatRestCplex* rest);
+double* getSubGrads(Solucao* sol, Instancia* inst, MatRestCplex* rest);
+void initSubGradRest10(Solucao* sol, Instancia* inst, MatRestCplex* rest, double* vetSubGrads);
 double* getSubGradRest14(Solucao* sol, Instancia* inst, RestricoesRelaxadas* rest);
 double* getSubGradRest15(Solucao* sol, Instancia* inst, RestricoesRelaxadas* rest);
-double calculaPasso(double eta, double lb, double ub, double* subGradsRes10, double* subGradsRes14, double* subGradsRes15, Instancia* inst);
+double calculaPasso(double eta, double lb, double ub, double* subGrads, Instancia* inst);
 void atualizaMultMenIg(double* vetMult, double passo, double* subGrad, int tamVet);
 void atualizaMultMaiIg(double* vetMult, double passo, double* subGrad, int tamVet);
 double* juntaVetsSubGrad(double* vetSubGrad10, double* vetSubGrad14, double* vetSubGrad15, int tamSubGra10, int tamSubGra14, int tamSubGra15);
 void debugaCoeficientes(char* arq, Instancia* instRel, Solucao* solRel, double* vetMultRes10, double* vetMultRes14, double* vetMultRes15);
 void printMultiplicadores(double* vet, int tam);
+void atualizaMultiplicadores(Instancia* inst, double* vetMult, double passo, double* subGrads);
 #endif // RelLagran

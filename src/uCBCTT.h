@@ -18,12 +18,12 @@
 //===================================== MÉTODOS ================================
 void montarModeloPLI(char *arq, Instancia* inst);
 
-Solucao* execCpx(char *arq, Instancia* inst, double* vetMultRes10, double* vetMultRes14, double* vetMultRes15);
+Solucao* execCpx(char *arq, Instancia* inst);
 
 void execUma(char* nomeInst);
 void execTodas();
 void montarModeloPLI(char *arq, Instancia* inst);
-void montarModeloRelaxado(char *arq, Instancia* inst, double* vetAlpha, double* vetMultRes14, double* vetMultRes15);
+void montarModeloRelaxado(char *arq, Instancia* inst);
 void initMultiplicadoresAle(double* vetMult, int tam, double lb, double ub);
 void initMultiplicadores(double* vetMult, int tam, double val);
 int getVetViabJanHor(Solucao* sol, Instancia* inst);
