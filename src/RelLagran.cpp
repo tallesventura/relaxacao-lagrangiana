@@ -41,6 +41,12 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMult, MatRestC
 		printf("Executando CPX\n");
 		solRel = (Solucao*)execCpx(arq, instRel);
 		printf("\n");
+		imprimeX(solRel, instOrig);
+		printf("\n");
+		imprimeZ(solRel, instOrig);
+		printf("\n");
+		imprimeY(solRel, instOrig);
+		printf("\n");
 
 		// ==================== DEBUG =============================================================
 		/*printf("========================================================\n");
@@ -85,7 +91,7 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMult, MatRestC
 		gap = fabs(ub - lb);
 		printf("GAP PERCENTUAL: %f%%\n", fabs((lb - ub) / ub) * 100);
 		printf("GAP ESCALAR (ub - lb): %f - %f = %.2f\n", ub, lb, gap);
-		if (gap < 1.0) {
+		if (gap == 0) {
 			break;
 		}
 
@@ -93,6 +99,7 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMult, MatRestC
 		printf("Calculando os sub-gradientes\n");
 		double* subGrads = getSubGrads(solRel, instRel, rest);
 
+		//printSubgrads(subGrads, instOrig);
 
 		if (itSemMelhora != 0 && itSemMelhora % 30 == 0) {
 			eta /= 2;
@@ -184,23 +191,6 @@ double* getSubGrads(Solucao* sol, Instancia* inst, MatRestCplex* rest) {
 }
 
 //------------------------------------------------------------------------------
-void initSubGradRest10(Solucao* sol, Instancia* inst, MatRestCplex* rest, double* vetSubGrads) {
-
-	int numX = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
-	int numZ = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
-	int numY = inst->numSal__ * inst->numDis__;
-	int numVar = numX + numY + numZ;
-	int numRest10 = inst->numTur__*inst->numDia__*inst->numPerDia__;
-
-	for (int lin = 0; lin < numRest10; lin++) {
-		for (int col = 0; col < numVar; col++) {
-
-		}
-	}
-}
-//------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
 double* getSubGradRest14(Solucao* sol, Instancia* inst, RestricoesRelaxadas* rest) {
 
 	int numRest14 = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
@@ -273,8 +263,11 @@ double calculaPasso(double eta, double lb, double ub, double* subGrads, Instanci
 	double modulo = 0;
 	for (int i = 0; i < numRest; i++) {
 		modulo += subGrads[i] * subGrads[i];
+		//printf("(%f * %f) + ", subGrads[i], subGrads[i]);
 	}
+	//printf("= %f\n", modulo);
 
+	//printf("(eta * (ub - lb)) / modulo => (%f * (%f - %f)) / %f\n", eta, ub, lb, modulo);
 	//printf("MODULO: %f\n", modulo);
 	return (eta * (ub - lb)) / modulo;
 }
@@ -387,4 +380,17 @@ void printMultiplicadores(double* vet, int tam) {
 	for (int i = 0; i < tam; i++) {
 		printf("%.3f, ", vet[i]);
 	}
+}
+
+void printSubgrads(double* vetSubgrads, Instancia* inst) {
+
+	int numRest10 = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
+	int numRest14 = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
+	int numRest15 = inst->numSal__ * inst->numDis__;
+	int numRest = numRest10 + numRest14 + numRest15;
+
+	for (int i = 0; i < numRest; i++) {
+		printf("%.3f, ", vetSubgrads[i]);
+	}
+	printf("\n");
 }
