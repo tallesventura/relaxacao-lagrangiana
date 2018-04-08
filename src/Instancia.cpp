@@ -589,6 +589,7 @@ void montaVetCoefXFO(Instancia* inst, double* vetMult, MatRestCplex* rest) {
 			soma += rest->matval[i] * vetMult[rest->matind[i]];
 		}
 
+		//printf("coefX[%d] = %f - %f = %f\n", k, inst->vetCoefX[k], soma, inst->vetCoefX[k] - soma);
 		inst->vetCoefX[k] -= soma;
 		k++;
 	}
@@ -614,6 +615,7 @@ void montaVetCoefZFO(Instancia* inst, double* vetMult, MatRestCplex* rest) {
 			soma += rest->matval[i] * vetMult[rest->matind[i]];
 		}
 
+		//printf("coefZ[%d] = %f - %f = %f\n", k, inst->vetCoefZ[k], soma, inst->vetCoefZ[k] - soma);
 		inst->vetCoefZ[k] -= soma;
 		k++;
 	}
@@ -651,6 +653,7 @@ void montaVetCoefYFO(Instancia* inst, double* vetMult, MatRestCplex* rest) {
 			soma += rest->matval[i] * vetMult[rest->matind[i]];
 		}
 
+		//printf("coefY[%d] = %f - %f = %f\n", k, inst->vetCoefY[k], soma, inst->vetCoefY[k] - soma);
 		inst->vetCoefY[k] -= soma;
 		k++;
 	}
@@ -813,8 +816,11 @@ int findCol(int pos, MatRestCplex* rest) {
 	index = col = 0;
 	
 	while (col < rest->numCol) {
-		if (index >= pos) { break; }
 		index += rest->matcnt[col];
+		if (index > pos) { 
+			return col;
+		}
+		
 		col++;
 	}
 	

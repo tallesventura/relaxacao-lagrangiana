@@ -20,8 +20,8 @@
 #define RELAXAR
 //#define ESCREVE_CSV
 
-//char INST[50] = "comp";
-char INST[50] = "toy";
+char INST[50] = "comp";
+//char INST[50] = "toy";
 
 char* NOME_INSTANCIAS[] = { "comp01", "comp02", "comp03", "comp04", "comp05", "comp06", "comp7", "comp08", "comp09", "comp10",
 "comp11", "comp12", "comp13", "comp14", "comp15", "comp16", "comp17", "comp18", "comp19", "comp20",
@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
 	srand(time(NULL));
 	char nomeInst[10];
 	strcpy_s(nomeInst, INST);
-	strcat_s(nomeInst, "3");
+	strcat_s(nomeInst, "01");
 
 	execUma(nomeInst);
 	//execTodas();
@@ -1381,7 +1381,7 @@ void printCoefsFO(Instancia* inst) {
 		for (int r = 0; r < inst->numSal__; r++) {
 			for (int c = 0; c < inst->numDis__; c++) {
 				posX = offset3D(r, p, c, inst->numPerTot__, inst->numDis__);
-				printf("%f,", inst->vetCoefX[posX]);
+				printf("%f, ", inst->vetCoefX[posX]);
 			}
 		}
 	}
@@ -1391,7 +1391,7 @@ void printCoefsFO(Instancia* inst) {
 		for (int d = 0; d < inst->numDia__; d++) {
 			for (int s = 0; s < inst->numPerDia__; s++) {
 				posZ = offset3D(u, d, s, inst->numDia__, inst->numPerDia__);
-				printf("%f,", inst->vetCoefZ[posZ]);
+				printf("%f, ", inst->vetCoefZ[posZ]);
 			}
 		}
 	}
@@ -1400,7 +1400,7 @@ void printCoefsFO(Instancia* inst) {
 	for (int r = 0; r < inst->numSal__; r++) {
 		for (int c = 0; c < inst->numDis__; c++) {
 			posY = offset2D(c, r, inst->numSal__);
-			printf("%f,", inst->vetCoefY[posY]);
+			printf("%f, ", inst->vetCoefY[posY]);
 		}
 	}
 			
