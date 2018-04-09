@@ -579,10 +579,11 @@ void montaVetCoefXFO(Instancia* inst, double* vetMult, MatRestCplex* rest) {
 	int numX = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
 	int ini, fim;
 
-	double soma = 0;
+	double soma;
 	int k = 0;
 
 	for (int col = 0; col < numX; col++) {
+		soma = 0;
 		ini = rest->matbeg[col];
 		fim = ini + rest->matcnt[col];
 		for (int i = ini; i < fim; i++) {
@@ -605,10 +606,11 @@ void montaVetCoefZFO(Instancia* inst, double* vetMult, MatRestCplex* rest) {
 	int lastCol = firstCol + numZ;
 	int ini, fim;
 
-	double soma = 0;
+	double soma;
 	int k = 0;
 
 	for (int col = firstCol; col < lastCol; col++) {
+		soma = 0;
 		ini = rest->matbeg[col];
 		fim = ini + rest->matcnt[col];
 		for (int i = ini; i < fim; i++) {
@@ -638,15 +640,16 @@ void montaVetCoefYFO(Instancia* inst, double* vetMult, MatRestCplex* rest) {
 
 	int numX = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
 	int numZ = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
-	int numY = inst->numSal__ + inst->numDis__;
+	int numY = inst->numSal__ * inst->numDis__;
 	int firstCol = offsetY(0, numX, numZ);
 	int lastCol = firstCol + numY;
 	int ini, fim;
 
-	double soma = 0;
+	double soma;
 	int k = 0;
 
 	for (int col = firstCol; col < lastCol; col++) {
+		soma = 0;
 		ini = rest->matbeg[col];
 		fim = ini + rest->matcnt[col];
 		for (int i = ini; i < fim; i++) {

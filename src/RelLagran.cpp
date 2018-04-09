@@ -42,12 +42,21 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMult, MatRestC
 		// Resolver o problema relaxado
 		//printf("Relaxando o modelo\n");
 		relaxarModelo(arq, instRel, vetMult, rest);
-		//imprimeMatRestCplex(rest, instRel);
-		//printf("------------------------------COEFS FO-------------------------------------\n");
-		//printCoefsFO(instRel);
-		//printf("\n");
 		printf("Executando CPX\n");
 		solRel = (Solucao*)execCpx(arq, instRel);
+		//imprimeMatRestCplex(rest, instRel);
+		//printf("------------------------------COEFS FO-------------------------------------\n");
+		////printCoefsFO(instRel);
+		//for (int i = 0; i < numX; i++) {
+		//	printf("%f;", instRel->vetCoefX[i]);
+		//}
+		//for (int i = 0; i < numZ; i++) {
+		//	printf("%f;", instRel->vetCoefZ[i]);
+		//}
+		//for (int i = 0; i < numY; i++) {
+		//	printf("%f;", instRel->vetCoefY[i]);
+		//}
+		//printf("\n---------------------------------------------------------------------\n");
 		//printf("\n");
 		/*imprimeX(solRel, instOrig);
 		printf("\n");
@@ -55,7 +64,9 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMult, MatRestC
 		printf("\n");
 		imprimeY(solRel, instOrig);*/
 		/*printf("\n----------------------MULTIPLICADORES-----------------------------------------------\n");
-		printMultiplicadores(vetMult, numRes);
+		for (int i = 0; i < numRes; i++) {
+			printf("%f;", vetMult[i]);
+		}
 		printf("\n---------------------------------------------------------------------\n");*/
 
 		// ==================== DEBUG =============================================================
@@ -140,6 +151,7 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMult, MatRestC
 		// Atualizar os multiplicadores
 		atualizaMultiplicadores(instOrig, vetMult, passo, subGrads);
 		//printMultiplicadores(vetMult, numRes);
+		
 
 		previousFO = solRel->funObj_;
 
@@ -184,7 +196,7 @@ double* getSubGrads(Solucao* sol, Instancia* inst, MatRestCplex* rest) {
 
 	int numX = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
 	int numZ = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
-	int numY = inst->numSal__ + inst->numDis__;
+	int numY = inst->numSal__ * inst->numDis__;
 	int numRest10 = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
 	int numRest14 = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
 	int numRest15 = inst->numSal__ * inst->numDis__;
