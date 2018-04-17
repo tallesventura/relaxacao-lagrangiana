@@ -24,6 +24,7 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMult, MatRestC
 	int numX = instOrig->numPerTot__ * instOrig->numSal__ * instOrig->numDis__;
 	int numZ = instOrig->numTur__ * instOrig->numDia__ * instOrig->numPerDia__;
 	int numY = instOrig->numSal__ * instOrig->numDis__;
+	int numVar = numX + numY + numZ;
 	printf("%d, %d, %d", numRest10, numRest14, numRest15);
 
 	int itSemMelhora = 0;
@@ -40,34 +41,30 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMult, MatRestC
 		instRel = clonarInstancia(instOrig);
 
 		// Resolver o problema relaxado
-		//printf("Relaxando o modelo\n");
+		printf("Relaxando o modelo\n");
 		relaxarModelo(arq, instRel, vetMult, rest);
 		printf("Executando CPX\n");
 		solRel = (Solucao*)execCpx(arq, instRel);
-		//imprimeMatRestCplex(rest, instRel);
-		//printf("------------------------------COEFS FO-------------------------------------\n");
-		////printCoefsFO(instRel);
-		//for (int i = 0; i < numX; i++) {
-		//	printf("%f;", instRel->vetCoefX[i]);
-		//}
-		//for (int i = 0; i < numZ; i++) {
-		//	printf("%f;", instRel->vetCoefZ[i]);
-		//}
-		//for (int i = 0; i < numY; i++) {
-		//	printf("%f;", instRel->vetCoefY[i]);
-		//}
-		//printf("\n---------------------------------------------------------------------\n");
-		//printf("\n");
-		/*imprimeX(solRel, instOrig);
-		printf("\n");
-		imprimeZ(solRel, instOrig);
-		printf("\n");
-		imprimeY(solRel, instOrig);*/
-		/*printf("\n----------------------MULTIPLICADORES-----------------------------------------------\n");
-		for (int i = 0; i < numRes; i++) {
-			printf("%f;", vetMult[i]);
+
+		printf("\n-------------------------COEFS FO----------------------------\n");
+		printCoefsFO(instRel);
+		printf("-------------------------------------------------------------\n");
+
+		printf("\n---------------------------SOLUCAO---------------------------\n");
+		for (int i = 0; i < numX; i++) {
+			printf("%f; ", solRel->vetSol_[i]);
 		}
-		printf("\n---------------------------------------------------------------------\n");*/
+		for (int i = 0; i < numZ; i++) {
+			printf("%f; ", solRel->vetSolZ_[i]);
+		}
+		for (int i = 0; i < numY; i++) {
+			printf("%f; ", solRel->vetSolY_[i]);
+		}
+		printf("-------------------------------------------------------------\n");
+
+		printf("\n--------------------MULTIPLICADORES--------------------------\n");
+		printMultiplicadores(vetMult, numRes);
+		printf("-------------------------------------------------------------\n");
 
 		// ==================== DEBUG =============================================================
 		/*printf("========================================================\n");
@@ -120,24 +117,13 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMult, MatRestC
 		printf("Calculando os sub-gradientes\n");
 		double* subGrads = getSubGrads(solRel, instRel, rest);
 
-		/*printf("----------------------SUBGRADS-----------------------------------------------\n");
-		printSubgrads(subGrads, instOrig);
-		printf("\n");*/
-
 		if (itSemMelhora != 0 && itSemMelhora % 30 == 0) {
 			eta /= 2;
 		}
 
-		/*for (int i = 0; i < numX; i++) {
-			printf("%f;", solRel->vetSol_[i]);
-		}
-		for (int i = 0; i < numZ; i++) {
-			printf("%f;", solRel->vetSolZ_[i]);
-		}
-		for (int i = 0; i < numY; i++) {
-			printf("%f;", solRel->vetSolY_[i]);
-		}
-		printf("\n");*/
+		printf("----------------------- SUBGRADS ----------------------------\n");
+		printSubgrads(subGrads, instOrig);
+		printf("-------------------------------------------------------------\n");
 
 		printf("calculando o passo\n");
 		// Calcular o passo
@@ -147,12 +133,10 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMult, MatRestC
 			break;
 		}
 
-		printf("atualizando multiplicadores\n");
 		// Atualizar os multiplicadores
+		printf("atualizando multiplicadores\n");
 		atualizaMultiplicadores(instOrig, vetMult, passo, subGrads);
-		//printMultiplicadores(vetMult, numRes);
 		
-
 		previousFO = solRel->funObj_;
 
 		printf("FO solRel = %f\n", solRel->funObj_);
@@ -171,8 +155,8 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMult, MatRestC
 		free(subGrads);
 
 		it++;
-	} while (eta > 0.005);
-	//} while (eta > 0.005 && it < 3);
+	//} while (eta > 0.005);
+	} while (eta > 0.005 && it < 3);
 
 	h = clock() - h;
 	printf("\n=============================\n");
@@ -201,7 +185,7 @@ double* getSubGrads(Solucao* sol, Instancia* inst, MatRestCplex* rest) {
 	int numRest14 = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
 	int numRest15 = inst->numSal__ * inst->numDis__;
 	int numRest = numRest10 + numRest14 + numRest15;
-	int col, posZ, posY;
+	int col, posZ, posY, lin;
 	double soma = 0;
 
 	double* vetSubGrads = (double*)malloc((numRest10 + numRest14 + numRest15) * sizeof(double));
@@ -210,37 +194,31 @@ double* getSubGrads(Solucao* sol, Instancia* inst, MatRestCplex* rest) {
 		vetSubGrads[i] = 0;
 	}
 
-	for (int lin = 0; lin < numRest; lin++) {
-		soma = 0;
-		for (int i = 0; i < rest->numCoefsTotal; i++) {
-			if (rest->matind[i] == lin) {
-				col = findCol(i, rest);
-				if (col < numX) {
-					//printf("%f + (%d * %f)\n", vetSubGrads[lin], rest->matval[i], sol->vetSol_[col]);
-					//printf("%f + ", rest->matval[i] * sol->vetSol_[col]);
-					soma += rest->matval[i] * sol->vetSol_[col];
-					//printf("(%d * %f) + ", rest->matval[i], sol->vetSol_[col]);
-				}
-				else if (col < numX + numZ) {
-					posZ = col - numX;
-					//printf("%f + (%d * %f)\n", vetSubGrads[lin], rest->matval[i], sol->vetSolZ_[posZ]);
-					//printf("%f + ", rest->matval[i] * sol->vetSolZ_[posZ]);
-					soma += rest->matval[i] * sol->vetSolZ_[posZ];
-					//printf("(%d * %f) + ", rest->matval[i], sol->vetSolZ_[posZ]);
-				}
-				else {
-					posY = col - numX - numZ;
-					//printf("%f + (%d * %f)\n", vetSubGrads[lin], rest->matval[i], sol->vetSolY_[posY]);
-					//printf("%f + ", rest->matval[i] * sol->vetSolY_[posY]);
-					soma += rest->matval[i] * sol->vetSolY_[posY];
-					//printf("(%d * %f) + ", rest->matval[i], sol->vetSolY_[posY]);
-				}
-			}
+	for (int i = 0; i < rest->numCoefsTotal; i++) {
+		lin = rest->matind[i];
+		col = findCol(i, rest);
+		if (col < numX) {
+			//printf("%f + (%d * %f)\n", vetSubGrads[lin], rest->matval[i], sol->vetSol_[col]);
+			//printf("%f + ", rest->matval[i] * sol->vetSol_[col]);
+			vetSubGrads[lin] += rest->matval[i] * sol->vetSol_[col];
+			//printf("(%d * %f) + ", rest->matval[i], sol->vetSol_[col]);
 		}
-		vetSubGrads[lin] = soma;
-		//printf("= %f\n", soma);
-		//printf("vetSubGrads[%d] = %f\n", lin, soma);
+		else if (col < numX + numZ) {
+			posZ = col - numX;
+			//printf("%f + (%d * %f)\n", vetSubGrads[lin], rest->matval[i], sol->vetSolZ_[posZ]);
+			//printf("%f + ", rest->matval[i] * sol->vetSolZ_[posZ]);
+			vetSubGrads[lin] += rest->matval[i] * sol->vetSolZ_[posZ];
+			//printf("(%d * %f) + ", rest->matval[i], sol->vetSolZ_[posZ]);
+		}
+		else {
+			posY = col - numX - numZ;
+			//printf("%f + (%d * %f)\n", vetSubGrads[lin], rest->matval[i], sol->vetSolY_[posY]);
+			//printf("%f + ", rest->matval[i] * sol->vetSolY_[posY]);
+			vetSubGrads[lin] += rest->matval[i] * sol->vetSolY_[posY];
+			//printf("(%d * %f) + ", rest->matval[i], sol->vetSolY_[posY]);
+		}
 	}
+
 
 	return vetSubGrads;
 }

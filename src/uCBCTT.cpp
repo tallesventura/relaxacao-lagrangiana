@@ -20,8 +20,8 @@
 #define RELAXAR
 //#define ESCREVE_CSV
 
-char INST[50] = "comp";
-//char INST[50] = "toy";
+//char INST[50] = "comp";
+char INST[50] = "toy";
 
 char* NOME_INSTANCIAS[] = { "comp01", "comp02", "comp03", "comp04", "comp05", "comp06", "comp7", "comp08", "comp09", "comp10",
 "comp11", "comp12", "comp13", "comp14", "comp15", "comp16", "comp17", "comp18", "comp19", "comp20",
@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
 	srand(time(NULL));
 	char nomeInst[10];
 	strcpy_s(nomeInst, INST);
-	strcat_s(nomeInst, "01");
+	strcat_s(nomeInst, "3");
 
 	execUma(nomeInst);
 	//execTodas();
@@ -67,7 +67,7 @@ void execUma(char* nomeInst) {
 	int numRest10 = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
 	int numRest14 = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
 	int numRest15 = inst->numSal__*inst->numDis__;
-	int numRest = numRest + numRest14 + numRest15;
+	int numRest = numRest10 + numRest14 + numRest15;
 	int numX = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
 	int numZ = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
 	int numY = inst->numSal__ * inst->numDis__;
@@ -90,21 +90,19 @@ void execUma(char* nomeInst) {
 	printf("Montando as matrizes de coeficientes do CPLEX\n");
 	MatRestCplex* matRestCplex = montaMatRestricoesCplex(restRel, inst);
 
+	printf("Desalocando restricoes relaxadas\n");
 	desalocaRestricoes(restRel, inst);
 
 	printf("Inicializando vetor de multiplicadores\n");
 	double* vetMult = (double*)malloc(numRest * sizeof(double));
 	initMultiplicadores(vetMult, numRest, VAL_INIT_ALPHA);
-
-	// Sem relaxacao
-	//montarModeloPLI(aux, inst);
 #else
 	montarModeloPLI(aux, inst);
 #endif
 	printf("Executando Relaxacao Lagrangiana\n");
 	sol = execRelLagran(aux, inst, vetMult, matRestCplex);
 	//sol = execCpx(aux, inst, vetMultRes10, vetMultRes14, vetMultRes15);
-	calculaFO(sol, inst);
+	montaSolucao(sol, inst);
 	strcpy_s(aux, PATH_INST);
 	strcat_s(aux, nomeInst);
 #ifndef RES_SOFT
@@ -1376,34 +1374,21 @@ void printVetD(Instancia* inst, double* vetD) {
 
 void printCoefsFO(Instancia* inst) {
 
-	int posX;
-	for (int p = 0; p < inst->numPerTot__; p++) {
-		for (int r = 0; r < inst->numSal__; r++) {
-			for (int c = 0; c < inst->numDis__; c++) {
-				posX = offset3D(r, p, c, inst->numPerTot__, inst->numDis__);
-				printf("%f, ", inst->vetCoefX[posX]);
-			}
-		}
+	int numX = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
+	int numZ = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
+	int numY = inst->numSal__ * inst->numDis__;
+
+	for (int i = 0; i < numX; i++) {
+		printf("%f, ", inst->vetCoefX[i]);
 	}
 
-	int posZ;
-	for (int u = 0; u < inst->numTur__; u++) {
-		for (int d = 0; d < inst->numDia__; d++) {
-			for (int s = 0; s < inst->numPerDia__; s++) {
-				posZ = offset3D(u, d, s, inst->numDia__, inst->numPerDia__);
-				printf("%f, ", inst->vetCoefZ[posZ]);
-			}
-		}
+	for (int i = 0; i < numZ; i++) {
+		printf("%f, ", inst->vetCoefZ[i]);
 	}
 
-	int posY;
-	for (int r = 0; r < inst->numSal__; r++) {
-		for (int c = 0; c < inst->numDis__; c++) {
-			posY = offset2D(c, r, inst->numSal__);
-			printf("%f, ", inst->vetCoefY[posY]);
-		}
-	}
-			
+	for (int i = 0; i < numY; i++) {
+		printf("%f, ", inst->vetCoefY[i]);
+	}		
 }
 
 void escreveCSVDebugCoefs(char* arq, Instancia* inst, Solucao* sol, double** matD, double* vetD, double* vetMultRes10, double* vetMultRes14, double* vetMultRes15) {
