@@ -20,8 +20,8 @@
 #define RELAXAR
 //#define ESCREVE_CSV
 
-//char INST[50] = "comp";
-char INST[50] = "toy";
+char INST[50] = "comp";
+//char INST[50] = "toy";
 
 char* NOME_INSTANCIAS[] = { "comp01", "comp02", "comp03", "comp04", "comp05", "comp06", "comp7", "comp08", "comp09", "comp10",
 "comp11", "comp12", "comp13", "comp14", "comp15", "comp16", "comp17", "comp18", "comp19", "comp20",
@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
 	srand(time(NULL));
 	char nomeInst[10];
 	strcpy_s(nomeInst, INST);
-	strcat_s(nomeInst, "3");
+	strcat_s(nomeInst, "02");
 
 	execUma(nomeInst);
 	//execTodas();
@@ -48,12 +48,19 @@ int main(int argc, char *argv[])
 
 void execUma(char* nomeInst) {
 	char aux[150];
+	char pathMatRest[150];
 	Solucao* sol;
 
 	strcpy_s(aux, PATH_INST);
 	strcat_s(aux, nomeInst);
 	strcat_s(aux, ".ctt");
 	printf("%s\n", aux);
+
+	strcpy_s(pathMatRest, PATH_INST);
+	strcat_s(pathMatRest, nomeInst);
+	strcat_s(pathMatRest, "_rest.txt");
+	printf("%s\n", pathMatRest);
+	
 	Instancia* inst = lerInstancia(aux);
 	initCoefsFO(inst);
 
@@ -90,8 +97,8 @@ void execUma(char* nomeInst) {
 	printf("Montando as matrizes de coeficientes do CPLEX\n");
 	MatRestCplex* matRestCplex = montaMatRestricoesCplex(restRel, inst);
 
-	printf("Desalocando restricoes relaxadas\n");
-	desalocaRestricoes(restRel, inst);
+	/*printf("Desalocando restricoes relaxadas\n");
+	desalocaRestricoes(restRel, inst);*/
 
 	printf("Inicializando vetor de multiplicadores\n");
 	double* vetMult = (double*)malloc(numRest * sizeof(double));
@@ -117,9 +124,9 @@ void execUma(char* nomeInst) {
 	strcat_s(aux, ".sol");
 	printf("Escrevendo Solucao\n");
 	escreverSol(sol, aux, inst);
+	desalocaMatRestCplex(matRestCplex);
 	desalocaIntancia(inst);
 	desalocaSolucao(sol);
-	desalocaMatRestCplex(matRestCplex);
 	free(vetMult);
 }
 
@@ -1534,4 +1541,89 @@ void desalocaMatD(double** matD, int nLin) {
 		free(matD[i]);
 	}
 	free(matD);
+}
+
+void escreveMatRestCplex(char* arq, MatRestCplex* matRest, Instancia* inst) {
+
+	FILE* f = fopen(arq, "w");
+
+	fprintf(f, "numCoefsTotal=");
+	fprintf(f, "%d\n", matRest->numCoefsTotal);
+	fprintf(f, "numCol=");
+	fprintf(f, "%d\n", matRest->numCol); 
+	fprintf(f, "numLin=");
+	fprintf(f, "%d\n", matRest->numLin);
+
+	// matbeg
+	fprintf(f, "matbeg\n");
+	for (int i = 0; i < matRest->numCol; i++) {
+		fprintf(f, "%d;", matRest->matbeg[i]);
+	}
+	fprintf(f, "\n");
+
+	// matcnt
+	fprintf(f, "matcnt\n");
+	for (int i = 0; i < matRest->numCol; i++) {
+		fprintf(f, "%d;", matRest->matcnt[i]);
+	}
+	fprintf(f, "\n");
+
+	// matval
+	fprintf(f, "matval\n");
+	for (int i = 0; i < matRest->numCoefsTotal; i++) {
+		fprintf(f, "%d;", matRest->matval[i]);
+	}
+	fprintf(f, "\n");
+
+	// matind
+	fprintf(f, "matind\n");
+	for (int i = 0; i < matRest->numCoefsTotal; i++) {
+		fprintf(f, "%d;", matRest->matind[i]);
+	}
+
+	fclose(f);
+}
+
+MatRestCplex* montaMatRestCplexArquivo(char* arq) {
+
+	FILE* f = fopen(arq, "r");
+
+	MatRestCplex* matRest = (MatRestCplex*)malloc(sizeof(MatRestCplex));
+
+	fscanf(f, "numCoefsTotal=%d\n", &matRest->numCoefsTotal);
+	fscanf(f, "numCol=%d\n", &matRest->numCol);
+	fscanf(f, "numLin=%d\n", &matRest->numLin);
+
+	matRest->matval = (int*)malloc(matRest->numCoefsTotal * sizeof(int));
+	matRest->matbeg = (int*)malloc(matRest->numCol * sizeof(int));
+	matRest->matind = (int*)malloc(matRest->numCoefsTotal * sizeof(int));
+	matRest->matcnt = (int*)malloc(matRest->numCol * sizeof(int));
+
+	fscanf(f, "matbeg\n");
+	for (int i = 0; i < matRest->numCol; i++) {
+		fscanf(f, "%d;", &(matRest->matbeg[i]));
+	}
+	fscanf(f, "\n");
+
+	fscanf(f, "matcnt\n");
+	for (int i = 0; i < matRest->numCol; i++) {
+		fscanf(f, "%d;", &(matRest->matcnt[i]));
+	}
+	fscanf(f, "\n");
+
+	fscanf(f, "matval\n");
+	for (int i = 0; i < matRest->numCoefsTotal; i++) {
+		fscanf(f, "%d;", &(matRest->matval[i]));
+	}
+	fscanf(f, "\n");
+
+	fscanf(f, "matind\n");
+	for (int i = 0; i < matRest->numCoefsTotal; i++) {
+		fscanf(f, "%d;", &(matRest->matind[i]));
+	}
+	fscanf(f, "\n");
+
+
+	fclose(f);
+	return matRest;
 }

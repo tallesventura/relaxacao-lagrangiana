@@ -281,6 +281,41 @@ int contaCoefsNaoNulos(Instancia* inst, RestricoesRelaxadas* rest) {
 	return numCoefs;
 }
 
+
+void montaRestCplex(RestricoesRelaxadas* rest, Instancia* inst) {
+
+	int numX = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
+	int numZ = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
+	int numY = inst->numSal__ * inst->numDis__;
+	int numVar = numX + numZ + numY;
+
+	int numRest10 = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
+	int numRest14 = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
+	int numRest15 = inst->numSal__*inst->numDis__;
+	int numRest = numRest10 + numRest14 + numRest15;
+
+	int numCoefsNaoNulos = 0;
+	int lin = 0;
+	int posX, dia;
+
+	for (int r = 0; r < inst->numSal__; r++) {
+		for (int p = 0; p < inst->numPerTot__; p++) {
+			for (int c = 0; c < inst->numDis__; c++) {
+
+
+
+				for (int u = 0; u < inst->numTur__; u++) {
+					for (int d = 0; d < inst->numDia__; d++) {
+
+					}
+				}
+			}
+		}
+	}
+	
+}
+
+
 MatRestCplex* montaMatRestricoesCplex(RestricoesRelaxadas* rest, Instancia* inst) {
 
 	int numX = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
@@ -354,6 +389,18 @@ MatRestCplex* montaMatRestricoesCplex(RestricoesRelaxadas* rest, Instancia* inst
 		col++;
 	}
 
+	// Desalocando matrizes de coeficientes de X
+	for (int i = 0; i < numRest10; i++) {
+		free(rest->vetRestJanHor__[i].coefMatX);
+	}
+	for (int i = 0; i < numRest14; i++) {
+		free(rest->vetRest14__[i].coefMatX);
+	}
+	for (int i = 0; i < numRest15; i++) {
+		free(rest->vetRest15__[i].coefMatX);
+	}
+
+
 	// Coeficientes de Z
 	for (int j = 0; j < numZ; j++) {
 		matRest->matbeg[col] = posVal;
@@ -376,6 +423,12 @@ MatRestCplex* montaMatRestricoesCplex(RestricoesRelaxadas* rest, Instancia* inst
 		matRest->matcnt[col] = countVal;
 		col++;
 	}
+
+	// Desalocando matrizes de coeficientes de Z
+	for (int i = 0; i < numRest10; i++) {
+		free(rest->vetRestJanHor__[i].coefMatZ);
+	}
+
 
 	// Coeficientes de Y
 	for (int j = 0; j < numY; j++) {
@@ -412,6 +465,20 @@ MatRestCplex* montaMatRestricoesCplex(RestricoesRelaxadas* rest, Instancia* inst
 		matRest->matcnt[col] = countVal;
 		col++;
 	}
+
+	// Desalocando matrizes de coeficientes de Y
+	for (int i = 0; i < numRest14; i++) {
+		free(rest->vetRest14__[i].coefMatY);
+	}
+	for (int i = 0; i < numRest15; i++) {
+		free(rest->vetRest15__[i].coefMatY);
+	}
+
+
+	free(rest->vetRestJanHor__);
+	free(rest->vetRest14__);
+	free(rest->vetRest15__);
+	free(rest);
 
 	return matRest;
 }
@@ -452,6 +519,7 @@ void imprimeMatRestCplex(MatRestCplex* mat, Instancia* inst) {
 	printf("\n");
 
 }
+
 
 //------------------------------------------------------------------------------
 void montaCoefRestJanHor(Instancia* inst, RestricoesRelaxadas* rest) {
@@ -687,6 +755,7 @@ void desalocaIntancia(Instancia* inst) {
 	free(inst->vetCoefZ);
 	free(inst->vetCoefQ);
 	free(inst->vetCoefY);
+	free(inst->matDisTur__);
 	free(inst);
 }
 //------------------------------------------------------------------------------
