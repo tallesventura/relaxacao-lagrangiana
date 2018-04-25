@@ -20,8 +20,8 @@
 #define RELAXAR
 //#define ESCREVE_CSV
 
-char INST[50] = "comp";
-//char INST[50] = "toy";
+//char INST[50] = "comp";
+char INST[50] = "toy";
 
 char* NOME_INSTANCIAS[] = { "comp01", "comp02", "comp03", "comp04", "comp05", "comp06", "comp7", "comp08", "comp09", "comp10",
 "comp11", "comp12", "comp13", "comp14", "comp15", "comp16", "comp17", "comp18", "comp19", "comp20",
@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
 	srand(time(NULL));
 	char nomeInst[10];
 	strcpy_s(nomeInst, INST);
-	strcat_s(nomeInst, "02");
+	strcat_s(nomeInst, "3");
 
 	execUma(nomeInst);
 	//execTodas();
@@ -78,6 +78,7 @@ void execUma(char* nomeInst) {
 	int numX = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
 	int numZ = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
 	int numY = inst->numSal__ * inst->numDis__;
+	int numVar = numX + numZ + numY;
 	printf("numX = %d; numZ = %d; numY = %d; total = %d\n", numX, numZ, numY, numX + numZ + numY);
 
 	RestricoesRelaxadas* restRel = (RestricoesRelaxadas*)malloc(sizeof(RestricoesRelaxadas));
@@ -89,13 +90,15 @@ void execUma(char* nomeInst) {
 	printf("Inicializando os vetores de restricoes 15\n");
 	restRel->vetRest15__ = getVetSalDif(inst, numRest15);
 
-	printf("Montando as matrizes de coeficientes das restricoes de Janela Horario\n");
+	/*printf("Montando as matrizes de coeficientes das restricoes de Janela Horario\n");
 	montaCoefRestJanHor(inst, restRel);
 	printf("Montando as matrizes de coeficientes das restricoes de Salas Diferentes\n");
-	montaCoefRestSalDif(inst, restRel);
+	montaCoefRestSalDif(inst, restRel);*/
 
 	printf("Montando as matrizes de coeficientes do CPLEX\n");
-	MatRestCplex* matRestCplex = montaMatRestricoesCplex(restRel, inst);
+	MatRestCplex* matRestCplex = montaMatRestCplex(inst, numVar, numRest);
+	imprimeMatRestCplex(matRestCplex, inst);
+	return;
 
 	/*printf("Desalocando restricoes relaxadas\n");
 	desalocaRestricoes(restRel, inst);*/
@@ -1584,46 +1587,256 @@ void escreveMatRestCplex(char* arq, MatRestCplex* matRest, Instancia* inst) {
 	fclose(f);
 }
 
-MatRestCplex* montaMatRestCplexArquivo(char* arq) {
 
-	FILE* f = fopen(arq, "r");
+void ordenaMatBegEMatVal(MatRestCplex* matRest, int ini, int fim) {
+
+	int pos;
+
+	if (ini < fim) {
+		pos = particiona(matRest, ini, fim);
+		ordenaMatBegEMatVal(matRest, ini, pos);
+		ordenaMatBegEMatVal(matRest, pos + 1, fim);
+	}
+}
+
+
+int particiona(MatRestCplex* matRest, int ini, int fim) {
+
+	int pivo = matRest->matind[ini];
+	int i = ini - 1;
+	int j = fim + 1;
+
+	while (1) {
+
+		do {
+			i++;
+		} while (matRest->matind[i] < pivo);
+
+		do {
+			j--;
+		} while (matRest->matind[j] > pivo);
+
+		if (i >= j) {
+			return j;
+		}
+
+		swap(&matRest->matind[i], &matRest->matind[j]);
+		swap(&matRest->matval[i], &matRest->matval[j]);
+	}
+}
+
+
+MatRestCplex* montaMatRestCplex(Instancia* inst, int numVar, int numRest) {
+
+	int numCoefsTotal = contaCoefRestJanHor(inst) + contaCoefRestSalDif(inst);
+	int numX = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
+	int numZ = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
+	int numY = inst->numSal__ * inst->numDis__;
 
 	MatRestCplex* matRest = (MatRestCplex*)malloc(sizeof(MatRestCplex));
+	matRest->numCoefsTotal = numCoefsTotal;
+	matRest->numCol = numVar;
+	matRest->numLin = numRest;
 
-	fscanf(f, "numCoefsTotal=%d\n", &matRest->numCoefsTotal);
-	fscanf(f, "numCol=%d\n", &matRest->numCol);
-	fscanf(f, "numLin=%d\n", &matRest->numLin);
+	printf("NUM COEFS: %d\n", numCoefsTotal);
 
 	matRest->matval = (int*)malloc(matRest->numCoefsTotal * sizeof(int));
-	matRest->matbeg = (int*)malloc(matRest->numCol * sizeof(int));
+	matRest->matbeg = (int*)malloc(numRest * sizeof(int));
 	matRest->matind = (int*)malloc(matRest->numCoefsTotal * sizeof(int));
-	matRest->matcnt = (int*)malloc(matRest->numCol * sizeof(int));
+	matRest->matcnt = (int*)malloc(numRest * sizeof(int));
 
-	fscanf(f, "matbeg\n");
-	for (int i = 0; i < matRest->numCol; i++) {
-		fscanf(f, "%d;", &(matRest->matbeg[i]));
+	int posX1, posX2, posX3, posZ, posY;
+	int lin = 0;
+	int pos = 0;
+	int numCoefs = 0;
+
+	// Primeiro período do dia
+	for (int u = 0; u < inst->numTur__; u++)
+	{
+		for (int d = 0; d < inst->numDia__; d++)
+		{
+			matRest->matbeg[lin] = pos;
+			for (int c = 0; c < inst->numDis__; c++) {
+				if (inst->matDisTur__[offset2D(c, u, inst->numTur__)] == 1)
+				{
+					for (int r = 0; r < inst->numSal__; r++) {
+						posX1 = offset3D(r, d*inst->numPerDia__, c, inst->numPerTot__, inst->numDis__);
+						posX2 = offset3D(r, d*inst->numPerDia__ + 1, c, inst->numPerTot__, inst->numDis__);
+
+						matRest->matval[pos] = 1;
+						matRest->matind[pos] = posX1;
+						pos++;
+						numCoefs++;
+
+						matRest->matval[pos] = -1;
+						matRest->matind[pos] = posX2;
+						pos++;
+						numCoefs++;
+					}
+				}
+			}
+
+			posZ = offset3D(u, d, 0, inst->numDia__, inst->numPerDia__);
+			matRest->matval[pos] = -1;
+			matRest->matind[pos] = posZ + numX;
+			pos++;
+			numCoefs++;
+
+			matRest->matcnt[lin] = numCoefs;
+
+			ordenaMatBegEMatVal(matRest, pos - numCoefs, pos - 1);
+
+			numCoefs = 0;
+			lin++;
+		}
 	}
-	fscanf(f, "\n");
 
-	fscanf(f, "matcnt\n");
-	for (int i = 0; i < matRest->numCol; i++) {
-		fscanf(f, "%d;", &(matRest->matcnt[i]));
+	// Último período do dia
+	for (int u = 0; u < inst->numTur__; u++)
+	{
+		for (int d = 0; d < inst->numDia__; d++)
+		{
+			matRest->matbeg[lin] = pos;
+			for (int c = 0; c < inst->numDis__; c++)
+				if (inst->matDisTur__[offset2D(c, u, inst->numTur__)] == 1)
+				{
+					for (int r = 0; r < inst->numSal__; r++) {
+						posX1 = offset3D(r, (d*inst->numPerDia__) + inst->numPerDia__ - 1, c, inst->numPerTot__, inst->numDis__);
+						posX2 = offset3D(r, (d*inst->numPerDia__) + inst->numPerDia__ - 2, c, inst->numPerTot__, inst->numDis__);
+
+						matRest->matval[pos] = 1;
+						matRest->matind[pos] = posX1;
+						pos++;
+						numCoefs++;
+
+						matRest->matval[pos] = -1;
+						matRest->matind[pos] = posX2;
+						pos++;
+						numCoefs++;
+					}
+				}
+
+			posZ = offset3D(u, d, 1, inst->numDia__, inst->numPerDia__);
+			matRest->matval[pos] = -1;
+			matRest->matind[pos] = posZ + numX;
+			pos++;
+			numCoefs++;
+
+			matRest->matcnt[lin] = numCoefs;
+
+			ordenaMatBegEMatVal(matRest, pos - numCoefs, pos - 1);
+
+			numCoefs = 0;
+			lin++;
+		}
 	}
-	fscanf(f, "\n");
 
-	fscanf(f, "matval\n");
-	for (int i = 0; i < matRest->numCoefsTotal; i++) {
-		fscanf(f, "%d;", &(matRest->matval[i]));
+	// Períodos intermediários do dia
+	for (int s = 2; s < inst->numPerDia__; s++)
+	{
+		for (int u = 0; u < inst->numTur__; u++)
+		{
+			for (int d = 0; d < inst->numDia__; d++)
+			{
+				matRest->matbeg[lin] = pos;
+				for (int c = 0; c < inst->numDis__; c++)
+					if (inst->matDisTur__[offset2D(c, u, inst->numTur__)] == 1)
+					{
+						for (int r = 0; r < inst->numSal__; r++) {
+							posX1 = offset3D(r, (d*inst->numPerDia__) + s - 1, c, inst->numPerTot__, inst->numDis__);
+							posX2 = offset3D(r, (d*inst->numPerDia__) + s - 2, c, inst->numPerTot__, inst->numDis__);
+							posX3 = offset3D(r, (d*inst->numPerDia__) + s, c, inst->numPerTot__, inst->numDis__);
+
+							matRest->matval[pos] = 1;
+							matRest->matind[pos] = posX1;
+							pos++;
+							numCoefs++;
+
+							matRest->matval[pos] = -1;
+							matRest->matind[pos] = posX1;
+							pos++;
+							numCoefs++;
+
+							matRest->matval[pos] = -1;
+							matRest->matind[pos] = posX1;
+							pos++;
+							numCoefs++;
+						}
+					}
+
+				posZ = offset3D(u, d, s, inst->numDia__, inst->numPerDia__);
+				matRest->matval[pos] = -1;
+				matRest->matind[pos] = posZ + numX;
+				pos++;
+				numCoefs++;
+
+				matRest->matcnt[lin] = numCoefs;
+
+				ordenaMatBegEMatVal(matRest, pos - numCoefs, pos - 1);
+
+				numCoefs = 0;
+				lin++;
+			}
+		}
 	}
-	fscanf(f, "\n");
 
-	fscanf(f, "matind\n");
-	for (int i = 0; i < matRest->numCoefsTotal; i++) {
-		fscanf(f, "%d;", &(matRest->matind[i]));
+	// Restrição 14
+	for (int p = 0; p < inst->numPerTot__; p++) {
+		for (int r = 0; r < inst->numSal__; r++) {
+			for (int c = 0; c < inst->numDis__; c++) {
+
+				numCoefs = 0;
+				matRest->matbeg[lin] = pos;
+
+				posX1 = offset3D(r, p, c, inst->numPerTot__, inst->numDis__);
+				posY = offset2D(c, r, inst->numSal__);
+
+				matRest->matval[pos] = 1;
+				matRest->matind[pos] = posX1;
+				numCoefs++;
+				pos++;
+
+				matRest->matval[pos] = -1;
+				matRest->matind[pos] = posY + numX + numZ;
+				numCoefs++;
+				pos++;
+
+				matRest->matcnt[lin] = numCoefs;
+
+				//ordenaMatBegEMatVal(matRest, pos - numCoefs, pos - 1);
+				
+				lin++;
+			}
+		}
 	}
-	fscanf(f, "\n");
 
 
-	fclose(f);
+	// Restrição 15
+	for (int r = 0; r < inst->numSal__; r++)
+	{
+		for (int c = 0; c < inst->numDis__; c++)
+		{
+			matRest->matbeg[lin] = pos;
+			for (int p = 0; p < inst->numPerTot__; p++) {
+				posX1 = offset3D(r, p, c, inst->numPerTot__, inst->numDis__);
+				matRest->matval[pos] = 1;
+				matRest->matind[pos] = posX1;
+				pos++;
+				numCoefs++;
+			}
+			
+			posY = offset2D(c, r, inst->numSal__);
+			matRest->matval[pos] = -1;
+			matRest->matind[pos] = posY + numX + numZ;
+			pos++;
+			numCoefs++;
+
+			matRest->matcnt[lin] = numCoefs;
+
+			lin++;
+			numCoefs = 0;
+		}
+	}
+	
 	return matRest;
 }

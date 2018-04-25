@@ -7,5 +7,6 @@ double** getMat2DDouble(int numLin, int numCol, double initVal);
 void initVetDouble(double* vet, int tam, double val);
 int offsetZ(int pos, int numX);
 int offsetY(int pos, int numX, int numZ);
+void swap(int* a, int* b);
 
 #endif

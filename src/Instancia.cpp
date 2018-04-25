@@ -495,7 +495,7 @@ void desalocaMatRestCplex(MatRestCplex* mat) {
 void imprimeMatRestCplex(MatRestCplex* mat, Instancia* inst) {
 
 	printf("MATBEG:\n");
-	for (int i = 0; i < mat->numCol; i++) {
+	for (int i = 0; i < mat->numLin; i++) {
 		printf("%d; ", mat->matbeg[i]);
 	}
 	printf("\n");
@@ -507,7 +507,7 @@ void imprimeMatRestCplex(MatRestCplex* mat, Instancia* inst) {
 	printf("\n");
 
 	printf("MATCNT:\n");
-	for (int i = 0; i < mat->numCol; i++) {
+	for (int i = 0; i < mat->numLin; i++) {
 		printf("%d; ", mat->matcnt[i]);
 	}
 	printf("\n");
@@ -522,7 +522,7 @@ void imprimeMatRestCplex(MatRestCplex* mat, Instancia* inst) {
 
 
 //------------------------------------------------------------------------------
-void montaCoefRestJanHor(Instancia* inst, RestricoesRelaxadas* rest) {
+int contaCoefRestJanHor(Instancia* inst) {
 
 	int numRest = inst->numTur__*inst->numDia__*inst->numPerDia__;
 	int pos = 0;
@@ -537,16 +537,10 @@ void montaCoefRestJanHor(Instancia* inst, RestricoesRelaxadas* rest) {
 				if (inst->matDisTur__[offset2D(c, u, inst->numTur__)] == 1)
 				{
 					for (int r = 0; r < inst->numSal__; r++) {
-						rest->vetRestJanHor__[pos].coefMatX[offset3D(r, d*inst->numPerDia__, c, inst->numPerTot__, inst->numDis__)] = 1;
-						rest->vetRestJanHor__[pos].coefMatX[offset3D(r, d*inst->numPerDia__ + 1, c, inst->numPerTot__, inst->numDis__)] = -1;
 						numCoefsNaoNulos += 2;
 					}
 				}
-			rest->vetRestJanHor__[pos].coefMatZ[offset3D(u, d, 0, inst->numDia__, inst->numPerDia__)] = -1;
 			numCoefsNaoNulos++;
-			rest->vetRestJanHor__[pos].numCoefsNaoNulos = numCoefsNaoNulos;
-			pos++;
-			numCoefsNaoNulos = 0;
 		}
 	}
 
@@ -559,16 +553,10 @@ void montaCoefRestJanHor(Instancia* inst, RestricoesRelaxadas* rest) {
 				if (inst->matDisTur__[offset2D(c, u, inst->numTur__)] == 1)
 				{
 					for (int r = 0; r < inst->numSal__; r++) {
-						rest->vetRestJanHor__[pos].coefMatX[offset3D(r, (d*inst->numPerDia__) + inst->numPerDia__ - 1, c, inst->numPerTot__, inst->numDis__)] = 1;
-						rest->vetRestJanHor__[pos].coefMatX[offset3D(r, (d*inst->numPerDia__) + inst->numPerDia__ - 2, c, inst->numPerTot__, inst->numDis__)] = -1;
 						numCoefsNaoNulos += 2;
 					}
 				}
-			rest->vetRestJanHor__[pos].coefMatZ[offset3D(u, d, 1, inst->numDia__, inst->numPerDia__)] = -1;
 			numCoefsNaoNulos++;
-			rest->vetRestJanHor__[pos].numCoefsNaoNulos = numCoefsNaoNulos;
-			pos++;
-			numCoefsNaoNulos = 0;
 		}
 	}
 
@@ -583,25 +571,20 @@ void montaCoefRestJanHor(Instancia* inst, RestricoesRelaxadas* rest) {
 					if (inst->matDisTur__[offset2D(c, u, inst->numTur__)] == 1)
 					{
 						for (int r = 0; r < inst->numSal__; r++) {
-							rest->vetRestJanHor__[pos].coefMatX[offset3D(r, (d*inst->numPerDia__) + s - 1, c, inst->numPerTot__, inst->numDis__)] = 1;
-							rest->vetRestJanHor__[pos].coefMatX[offset3D(r, (d*inst->numPerDia__) + s - 2, c, inst->numPerTot__, inst->numDis__)] = -1;
-							rest->vetRestJanHor__[pos].coefMatX[offset3D(r, (d*inst->numPerDia__) + s, c, inst->numPerTot__, inst->numDis__)] = -1;
 							numCoefsNaoNulos += 3;
 						}
 					}
-				rest->vetRestJanHor__[pos].coefMatZ[offset3D(u, d, s, inst->numDia__, inst->numPerDia__)] = -1;
 				numCoefsNaoNulos++;
-				rest->vetRestJanHor__[pos].numCoefsNaoNulos = numCoefsNaoNulos;
-				pos++;
-				numCoefsNaoNulos = 0;
 			}
 		}
 	}
+
+	return numCoefsNaoNulos;
 }
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-void montaCoefRestSalDif(Instancia* inst, RestricoesRelaxadas* rest) {
+int contaCoefRestSalDif(Instancia* inst) {
 
 	// Restrição 14
 	int numCoefsNaoNulos = 0;
@@ -609,35 +592,26 @@ void montaCoefRestSalDif(Instancia* inst, RestricoesRelaxadas* rest) {
 	for (int p = 0; p < inst->numPerTot__; p++) {
 		for (int r = 0; r < inst->numSal__; r++) {
 			for (int c = 0; c < inst->numDis__; c++) {
-				rest->vetRest14__[pos].coefMatX[offset3D(r, p, c, inst->numPerTot__, inst->numDis__)] = 1;
-				rest->vetRest14__[pos].coefMatY[offset2D(c, r, inst->numSal__)] = -1;
 				numCoefsNaoNulos += 2;
-				rest->vetRest14__[pos].numCoefsNaoNulos = numCoefsNaoNulos;
-				pos++;
-				numCoefsNaoNulos = 0;
 			}
 		}
 	}
 	
 
 	// Restrição 15
-	numCoefsNaoNulos = 0;
 	pos = 0;
 	for (int r = 0; r < inst->numSal__; r++)
 	{
 		for (int c = 0; c < inst->numDis__; c++)
 		{
 			for (int p = 0; p < inst->numPerTot__; p++) {
-				rest->vetRest15__[pos].coefMatX[offset3D(r, p, c, inst->numPerTot__, inst->numDis__)] = 1;
 				numCoefsNaoNulos++;
 			}
-			rest->vetRest15__[pos].coefMatY[offset2D(c, r, inst->numSal__)] = -1;
 			numCoefsNaoNulos++;
-			rest->vetRest15__[pos].numCoefsNaoNulos = numCoefsNaoNulos;
-			pos++;
-			numCoefsNaoNulos = 0;
 		}
 	}
+
+	return numCoefsNaoNulos;
 }
 //------------------------------------------------------------------------------
 

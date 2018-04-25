@@ -531,11 +531,15 @@ void compararSolucoes(Solucao* sol1, Solucao* sol2, Instancia* inst) {
 }
 //------------------------------------------------------------------------------
 
-void escreverResultadosCSV(char* arq, Solucao* s, Instancia* inst, float tempo, float ) {
+void escreverResultadosCSV(char* arq, Solucao* s, Instancia* inst, double tempo, double eta, double gap) {
 
 	FILE* f = fopen(arq, "w");
 
-	
+	fprintf(f, "FO: %f\n", s->funObj_);
+	fprintf(f, "GAP: %f\n", gap);
+	fprintf(f, "eta: %f\n", eta);
+	fprintf(f, "tempo: %f segundos\n", tempo);
+
 	
 
 	fclose(f);

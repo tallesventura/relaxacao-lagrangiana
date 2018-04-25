@@ -40,7 +40,10 @@ void printCoefsFO(Instancia* inst);
 void escreveCSVDebugCoefs(char* arq, Instancia* inst, Solucao* sol, double** matD, double* vetD, double* vetMultRes10, double* vetMultRes14, double* vetMultRes15);
 void desalocaMatD(double** matD, int nLin);
 void escreveMatRestCplex(char* arq, MatRestCplex* matRest, Instancia* inst);
-MatRestCplex* montaMatRestCplexArquivo(char* arq);
+MatRestCplex* montaMatRestCplex(Instancia* inst, int numVar, int numRest);
+int particiona(MatRestCplex* matRest, int ini, int fim);
+void ordenaMatBegEMatVal(MatRestCplex* matRest, int ini, int fim);
+
 //==============================================================================
 
 #endif

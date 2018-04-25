@@ -40,3 +40,9 @@ void initVetDouble(double* vet, int tam, double val) {
 		vet[i] = val;
 	}
 }
+
+void swap(int* a, int* b) {
+	int t = *a;
+	*a = *b;
+	*b = t;
+}
