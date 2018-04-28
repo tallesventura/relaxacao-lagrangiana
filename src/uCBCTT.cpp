@@ -83,12 +83,12 @@ void execUma(char* nomeInst) {
 
 	RestricoesRelaxadas* restRel = (RestricoesRelaxadas*)malloc(sizeof(RestricoesRelaxadas));
 
-	printf("Inicializando os vetores de restricoes 10\n");
+	/*printf("Inicializando os vetores de restricoes 10\n");
 	restRel->vetRestJanHor__ =  getVetJanHor(inst, numRest10);
 	printf("Inicializando os vetores de restricoes 14\n");
 	restRel->vetRest14__ = getVetSalDif(inst, numRest14);
 	printf("Inicializando os vetores de restricoes 15\n");
-	restRel->vetRest15__ = getVetSalDif(inst, numRest15);
+	restRel->vetRest15__ = getVetSalDif(inst, numRest15);*/
 
 	/*printf("Montando as matrizes de coeficientes das restricoes de Janela Horario\n");
 	montaCoefRestJanHor(inst, restRel);
@@ -97,8 +97,6 @@ void execUma(char* nomeInst) {
 
 	printf("Montando as matrizes de coeficientes do CPLEX\n");
 	MatRestCplex* matRestCplex = montaMatRestCplex(inst, numVar, numRest);
-	imprimeMatRestCplex(matRestCplex, inst);
-	return;
 
 	/*printf("Desalocando restricoes relaxadas\n");
 	desalocaRestricoes(restRel, inst);*/
@@ -1389,15 +1387,15 @@ void printCoefsFO(Instancia* inst) {
 	int numY = inst->numSal__ * inst->numDis__;
 
 	for (int i = 0; i < numX; i++) {
-		printf("%f, ", inst->vetCoefX[i]);
+		printf("%f; ", inst->vetCoefX[i]);
 	}
 
 	for (int i = 0; i < numZ; i++) {
-		printf("%f, ", inst->vetCoefZ[i]);
+		printf("%f; ", inst->vetCoefZ[i]);
 	}
 
 	for (int i = 0; i < numY; i++) {
-		printf("%f, ", inst->vetCoefY[i]);
+		printf("%f; ", inst->vetCoefY[i]);
 	}		
 }
 
@@ -1802,8 +1800,6 @@ MatRestCplex* montaMatRestCplex(Instancia* inst, int numVar, int numRest) {
 				pos++;
 
 				matRest->matcnt[lin] = numCoefs;
-
-				//ordenaMatBegEMatVal(matRest, pos - numCoefs, pos - 1);
 				
 				lin++;
 			}
@@ -1816,6 +1812,7 @@ MatRestCplex* montaMatRestCplex(Instancia* inst, int numVar, int numRest) {
 	{
 		for (int c = 0; c < inst->numDis__; c++)
 		{
+			numCoefs = 0;
 			matRest->matbeg[lin] = pos;
 			for (int p = 0; p < inst->numPerTot__; p++) {
 				posX1 = offset3D(r, p, c, inst->numPerTot__, inst->numDis__);
@@ -1834,7 +1831,6 @@ MatRestCplex* montaMatRestCplex(Instancia* inst, int numVar, int numRest) {
 			matRest->matcnt[lin] = numCoefs;
 
 			lin++;
-			numCoefs = 0;
 		}
 	}
 	

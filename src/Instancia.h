@@ -83,5 +83,5 @@ void desalocaRestricoes(RestricoesRelaxadas* rest, Instancia* inst);
 MatRestCplex* montaMatRestricoesCplex(RestricoesRelaxadas* rest, Instancia* inst);
 void imprimeMatRestCplex(MatRestCplex* mat, Instancia* inst);
 void desalocaMatRestCplex(MatRestCplex* mat);
-int findCol(int pos, MatRestCplex* rest);
+int findLin(int pos, MatRestCplex* rest);
 #endif // !InstanciaH

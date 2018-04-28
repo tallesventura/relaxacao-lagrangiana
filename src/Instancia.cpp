@@ -616,52 +616,46 @@ int contaCoefRestSalDif(Instancia* inst) {
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-void montaVetCoefXFO(Instancia* inst, double* vetMult, MatRestCplex* rest) {
+void montaVetCoefXFO(Instancia* inst, double* vetMult, MatRestCplex* matRest) {
 
 	int numX = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
-	int ini, fim;
+	int k;
+	double soma = 0;
 
-	double soma;
-	int k = 0;
-
-	for (int col = 0; col < numX; col++) {
+	for (int j = 0; j < numX; j++) {
 		soma = 0;
-		ini = rest->matbeg[col];
-		fim = ini + rest->matcnt[col];
-		for (int i = ini; i < fim; i++) {
-			soma += rest->matval[i] * vetMult[rest->matind[i]];
+		for (int i = 0; i < matRest->numCoefsTotal; i++) {
+			if (matRest->matind[i] == j) {
+				k = findLin(i, matRest);
+				soma += matRest->matval[i] * vetMult[k];
+			}
 		}
-
-		//printf("coefX[%d] = %f - %f = %f\n", k, inst->vetCoefX[k], soma, inst->vetCoefX[k] - soma);
-		inst->vetCoefX[k] -= soma;
-		k++;
+		inst->vetCoefX[j] -= soma;
 	}
 }
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-void montaVetCoefZFO(Instancia* inst, double* vetMult, MatRestCplex* rest) {
+void montaVetCoefZFO(Instancia* inst, double* vetMult, MatRestCplex* matRest) {
 
 	int numX = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
 	int numZ = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
-	int firstCol = offsetZ(0, numX);
-	int lastCol = firstCol + numZ;
-	int ini, fim;
-
+	int k, ini, fim, pos;
 	double soma;
-	int k = 0;
+	ini = numX;
+	fim = numX + numZ;
+	pos = 0;
 
-	for (int col = firstCol; col < lastCol; col++) {
+	for (int j = ini; j < fim; j++) {
 		soma = 0;
-		ini = rest->matbeg[col];
-		fim = ini + rest->matcnt[col];
-		for (int i = ini; i < fim; i++) {
-			soma += rest->matval[i] * vetMult[rest->matind[i]];
+		for (int i = 0; i < matRest->numCoefsTotal; i++) {
+			if (matRest->matind[i] == j) {
+				k = findLin(i, matRest);
+				soma += matRest->matval[i] * vetMult[k];
+			}
 		}
-
-		//printf("coefZ[%d] = %f - %f = %f\n", k, inst->vetCoefZ[k], soma, inst->vetCoefZ[k] - soma);
-		inst->vetCoefZ[k] -= soma;
-		k++;
+		inst->vetCoefZ[pos] -= soma;
+		pos++;
 	}
 }
 //------------------------------------------------------------------------------
@@ -678,29 +672,27 @@ void montaVetCoefQFO(Instancia* inst) {
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-void montaVetCoefYFO(Instancia* inst, double* vetMult, MatRestCplex* rest) {
+void montaVetCoefYFO(Instancia* inst, double* vetMult, MatRestCplex* matRest) {
 
 	int numX = inst->numPerTot__ * inst->numSal__ * inst->numDis__;
 	int numZ = inst->numTur__ * inst->numDia__ * inst->numPerDia__;
 	int numY = inst->numSal__ * inst->numDis__;
-	int firstCol = offsetY(0, numX, numZ);
-	int lastCol = firstCol + numY;
-	int ini, fim;
-
+	int k, ini, fim, pos;
 	double soma;
-	int k = 0;
+	ini = numX + numZ;
+	fim = ini + numY;
+	pos = 0;
 
-	for (int col = firstCol; col < lastCol; col++) {
+	for (int j = ini; j < fim; j++) {
 		soma = 0;
-		ini = rest->matbeg[col];
-		fim = ini + rest->matcnt[col];
-		for (int i = ini; i < fim; i++) {
-			soma += rest->matval[i] * vetMult[rest->matind[i]];
+		for (int i = 0; i < matRest->numCoefsTotal; i++) {
+			if (matRest->matind[i] == j) {
+				k = findLin(i, matRest);
+				soma += matRest->matval[i] * vetMult[k];
+			}
 		}
-
-		//printf("coefY[%d] = %f - %f = %f\n", k, inst->vetCoefY[k], soma, inst->vetCoefY[k] - soma);
-		inst->vetCoefY[k] -= soma;
-		k++;
+		inst->vetCoefY[pos] -= soma;
+		pos++;
 	}
 }
 //------------------------------------------------------------------------------
@@ -856,19 +848,19 @@ void desalocaRestricoes(RestricoesRelaxadas* rest, Instancia* inst) {
 	free(rest);
 }
 
-int findCol(int pos, MatRestCplex* rest) {
+int findLin(int pos, MatRestCplex* rest) {
 
-	int col, index;
-	index = col = 0;
+	int lin, index;
+	index = lin = 0;
 	
-	while (col < rest->numCol) {
-		index += rest->matcnt[col];
+	while (lin < rest->numLin) {
+		index += rest->matcnt[lin];
 		if (index > pos) { 
-			return col;
+			return lin;
 		}
 		
-		col++;
+		lin++;
 	}
 	
-	return col;
+	return lin;
 }
