@@ -46,7 +46,7 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMult, MatRestC
 		printf("Executando CPX\n");
 		solRel = (Solucao*)execCpx(arq, instRel);
 		
-		printf("\n-------------------------COEFS FO----------------------------\n");
+		/*printf("\n-------------------------COEFS FO----------------------------\n");
 		printCoefsFO(instRel);
 		printf("\n-------------------------------------------------------------\n");
 		
@@ -64,7 +64,7 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMult, MatRestC
 
 		printf("\n--------------------MULTIPLICADORES--------------------------\n");
 		printMultiplicadores(vetMult, numRes);
-		printf("-------------------------------------------------------------\n");
+		printf("-------------------------------------------------------------\n");*/
 
 		// ==================== DEBUG =============================================================
 		/*printf("========================================================\n");
@@ -121,9 +121,9 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMult, MatRestC
 			eta /= 2;
 		}
 
-		printf("----------------------- SUBGRADS ----------------------------\n");
+		/*printf("----------------------- SUBGRADS ----------------------------\n");
 		printSubgrads(subGrads, instOrig);
-		printf("-------------------------------------------------------------\n");
+		printf("-------------------------------------------------------------\n");*/
 
 		printf("calculando o passo\n");
 		// Calcular o passo
@@ -156,7 +156,7 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMult, MatRestC
 
 		it++;
 	//} while (eta > 0.005);
-	} while (eta > 0.005 && it < 2);
+	} while (eta > 0.005 && it < 1);
 
 	h = clock() - h;
 	printf("\n=============================\n");

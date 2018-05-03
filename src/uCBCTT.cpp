@@ -20,10 +20,10 @@
 #define RELAXAR
 //#define ESCREVE_CSV
 
-//char INST[50] = "comp";
-char INST[50] = "toy";
+char INST[50] = "comp";
+//char INST[50] = "toy";
 
-char* NOME_INSTANCIAS[] = { "comp01", "comp02", "comp03", "comp04", "comp05", "comp06", "comp7", "comp08", "comp09", "comp10",
+char* NOME_INSTANCIAS[] = { "comp01", "comp02", "comp03", "comp04", "comp05", "comp06", "comp07", "comp08", "comp09", "comp10",
 "comp11", "comp12", "comp13", "comp14", "comp15", "comp16", "comp17", "comp18", "comp19", "comp20",
 "comp21" };
 
@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
 	srand(time(NULL));
 	char nomeInst[10];
 	strcpy_s(nomeInst, INST);
-	strcat_s(nomeInst, "3");
+	strcat_s(nomeInst, "01");
 
 	execUma(nomeInst);
 	//execTodas();
@@ -48,18 +48,12 @@ int main(int argc, char *argv[])
 
 void execUma(char* nomeInst) {
 	char aux[150];
-	char pathMatRest[150];
 	Solucao* sol;
 
 	strcpy_s(aux, PATH_INST);
 	strcat_s(aux, nomeInst);
 	strcat_s(aux, ".ctt");
 	printf("%s\n", aux);
-
-	strcpy_s(pathMatRest, PATH_INST);
-	strcat_s(pathMatRest, nomeInst);
-	strcat_s(pathMatRest, "_rest.txt");
-	printf("%s\n", pathMatRest);
 	
 	Instancia* inst = lerInstancia(aux);
 	initCoefsFO(inst);
@@ -81,25 +75,8 @@ void execUma(char* nomeInst) {
 	int numVar = numX + numZ + numY;
 	printf("numX = %d; numZ = %d; numY = %d; total = %d\n", numX, numZ, numY, numX + numZ + numY);
 
-	RestricoesRelaxadas* restRel = (RestricoesRelaxadas*)malloc(sizeof(RestricoesRelaxadas));
-
-	/*printf("Inicializando os vetores de restricoes 10\n");
-	restRel->vetRestJanHor__ =  getVetJanHor(inst, numRest10);
-	printf("Inicializando os vetores de restricoes 14\n");
-	restRel->vetRest14__ = getVetSalDif(inst, numRest14);
-	printf("Inicializando os vetores de restricoes 15\n");
-	restRel->vetRest15__ = getVetSalDif(inst, numRest15);*/
-
-	/*printf("Montando as matrizes de coeficientes das restricoes de Janela Horario\n");
-	montaCoefRestJanHor(inst, restRel);
-	printf("Montando as matrizes de coeficientes das restricoes de Salas Diferentes\n");
-	montaCoefRestSalDif(inst, restRel);*/
-
 	printf("Montando as matrizes de coeficientes do CPLEX\n");
 	MatRestCplex* matRestCplex = montaMatRestCplex(inst, numVar, numRest);
-
-	/*printf("Desalocando restricoes relaxadas\n");
-	desalocaRestricoes(restRel, inst);*/
 
 	printf("Inicializando vetor de multiplicadores\n");
 	double* vetMult = (double*)malloc(numRest * sizeof(double));
@@ -138,52 +115,6 @@ void execTodas() {
 	}
 }
 
-//void execTodas() {
-//	for (int i = 1; i <= NUM_INST; i++) {
-//
-//		char aux[150];
-//		char nomeInst[20];
-//		char temp[10];
-//		Solucao* sol;
-//
-//		strcpy_s(aux, PATH_INST);
-//		strcpy_s(nomeInst, INST);
-//		if (i < 10) {
-//			strcat_s(nomeInst, "0");
-//			sprintf_s(temp, "%d", i);
-//			strcat_s(nomeInst, temp);
-//		}
-//		else {
-//			if (i == 11)
-//				continue;
-//			sprintf(temp, "%d", i);
-//			strcat_s(nomeInst, temp);
-//		}
-//		strcat_s(aux, nomeInst);
-//		strcat_s(aux, ".ctt");
-//		Instancia* inst = lerInstancia(aux);
-//		//lerSolucoesIniciais();
-//
-//		//testarEntrada();
-//		strcpy_s(aux, PATH_INST);
-//		strcat_s(aux, nomeInst);
-//#ifndef RES_SOFT
-//		strcat_s(aux, "-H");
-//#endif 
-//		strcat_s(aux, ".lp");
-//		montarModeloPLI(aux,inst);
-//		sol = execCpx(aux, inst);
-//		strcpy_s(aux, PATH_INST);
-//		strcat_s(aux, nomeInst);
-//#ifndef RES_SOFT
-//		strcat_s(aux, "-H");
-//#endif 
-//		strcat_s(aux, ".sol");
-//		escreverSol(sol, aux, inst);
-//		free(inst);
-//	}
-//}
-//------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
 void getValSol(Solucao *sol, CPXENVptr env, CPXLPptr lp, Instancia* inst) {
