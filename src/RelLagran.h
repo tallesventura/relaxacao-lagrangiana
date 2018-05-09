@@ -17,7 +17,7 @@
 
 // MÉTODOS ===================================================================================
 
-Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMult, MatRestCplex* rest);
+Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMult, MatRestCplex* rest, int paradaPorTempo, int ubFixo, double ub);
 void relaxarModelo(char *arq, Instancia* inst, double* vetMultRes, MatRestCplex* rest);
 double* getSubGrads(Solucao* sol, Instancia* inst, MatRestCplex* rest);
 double* getSubGradRest14(Solucao* sol, Instancia* inst, RestricoesRelaxadas* rest);

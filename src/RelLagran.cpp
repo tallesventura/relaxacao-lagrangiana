@@ -7,13 +7,21 @@
 #include <string.h>
 
 //------------------------------------------------------------------------------
-Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMult, MatRestCplex* rest) {
+/*
+paradaPorTempo {
+	false: enquanto eta > 0.005
+	true:  roda por 1 hora;
+}
+*/
+Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMult, MatRestCplex* rest, int paradaPorTempo, int ubFixo, double ub) {
 
 	Solucao *solRel, *solViav, *bestSol;
 	Instancia* instRel;
+	solViav = bestSol = NULL;
+
+	double firstLB, firstUB, tempo;
 	double lb = -INFINITY;
-	double ub = INFINITY;
-	double previousFO = -INFINITY;
+	ub = ubFixo ? ub : INFINITY;
 	double eta = 2.0;
 
 	double gap, passo;
@@ -25,8 +33,7 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMult, MatRestC
 	int numZ = instOrig->numTur__ * instOrig->numDia__ * instOrig->numPerDia__;
 	int numY = instOrig->numSal__ * instOrig->numDis__;
 	int numVar = numX + numY + numZ;
-	printf("%d, %d, %d", numRest10, numRest14, numRest15);
-
+	int continua = 1;
 	int itSemMelhora = 0;
 	int it = 0;
 	
@@ -45,52 +52,19 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMult, MatRestC
 		relaxarModelo(arq, instRel, vetMult, rest);
 		printf("Executando CPX\n");
 		solRel = (Solucao*)execCpx(arq, instRel);
-		
-		/*printf("\n-------------------------COEFS FO----------------------------\n");
-		printCoefsFO(instRel);
-		printf("\n-------------------------------------------------------------\n");
-		
-		printf("\n---------------------------SOLUCAO---------------------------\n");
-		for (int i = 0; i < numX; i++) {
-			printf("%f; ", solRel->vetSol_[i]);
+
+		if (!ubFixo) {
+			// Viabilizar a solução
+			printf("Clonando solucao\n");
+			solViav = clonarSolucao(solRel, instRel);
+			printf("Viabilizando solucao\n");
+			viabilizaSol(solViav, instOrig);
+			calculaFO(solViav, instOrig);
 		}
-		for (int i = 0; i < numZ; i++) {
-			printf("%f; ", solRel->vetSolZ_[i]);
-		}
-		for (int i = 0; i < numY; i++) {
-			printf("%f; ", solRel->vetSolY_[i]);
-		}
-		printf("-------------------------------------------------------------\n");
-
-		printf("\n--------------------MULTIPLICADORES--------------------------\n");
-		printMultiplicadores(vetMult, numRes);
-		printf("-------------------------------------------------------------\n");*/
-
-		// ==================== DEBUG =============================================================
-		/*printf("========================================================\n");
-		//printCoefsFO(instRel);
-		printf("\n========================================================\n");
-		char dest[50];
-		char* aux = "toy3_debug_it-";
-		strcpy_s(dest, aux);
-		char nomeit[10];
-		strcat_s(dest, itoa(it, nomeit, 10));
-		strcat_s(dest, ".csv");
-		printf("%s\n", dest);
-
-		debugaCoeficientes(dest, instRel, solRel, vetMultRes10, vetMultRes14, vetMultRes15);*/
-		// ==================== DEBUG =============================================================
-
-		// Viabilizar a solução
-		printf("Clonando solucao\n");
-		solViav = clonarSolucao(solRel, instRel);
-		printf("Viabilizando solucao\n");
-		viabilizaSol(solViav, instOrig);
-		calculaFO(solViav, instOrig);
 
 		if (solRel->funObj_ > lb) {
 			itSemMelhora = 0;
-			bestSol = clonarSolucao(solViav, instOrig);
+			bestSol = clonarSolucao(solRel, instOrig);
 		}
 		else {
 			itSemMelhora++;
@@ -99,17 +73,24 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMult, MatRestC
 		// Calcular os limitantes
 		double auxLB = lb;
 		lb = MAX(auxLB, solRel->funObj_);
-		double auxUB = ub;
-		ub = MIN(auxUB, solViav->funObj_);
-		//ub = 5;
+		
+		if (!ubFixo) {
+			double auxUB = ub;
+			ub = MIN(auxUB, solViav->funObj_);
+		}
 
-		printf("lb: MAX(%f, %f) = %f\n", auxLB, solRel->funObj_, lb);
-		printf("ub: MIN(%f, %f) = %f\n", auxUB, solViav->funObj_, ub);
+		printf("LB = %f\n", lb);
+		printf("UB = %f\n", ub);
 
-		gap = fabs(ub - lb);
-		printf("GAP PERCENTUAL: %f%%\n", fabs((lb - ub) / ub) * 100);
-		printf("GAP ESCALAR (ub - lb): %f - %f = %.2f\n", ub, lb, gap);
-		if (gap == 0) {
+		if (it == 0) {
+			firstLB = lb;
+			firstUB = ub;
+		}
+
+		gap = fabs((lb - ub) / ub) * 100;
+		printf("GAP: %f%%\n", fabs((lb - ub) / ub) * 100);
+
+		if (ub - lb < 1) {
 			break;
 		}
 
@@ -121,26 +102,18 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMult, MatRestC
 			eta /= 2;
 		}
 
-		/*printf("----------------------- SUBGRADS ----------------------------\n");
-		printSubgrads(subGrads, instOrig);
-		printf("-------------------------------------------------------------\n");*/
-
 		printf("calculando o passo\n");
 		// Calcular o passo
 		passo = calculaPasso(eta, lb, ub, subGrads, instOrig);
 
-		if (passo == 0) {
-			break;
-		}
-
 		// Atualizar os multiplicadores
 		printf("atualizando multiplicadores\n");
 		atualizaMultiplicadores(instOrig, vetMult, passo, subGrads);
-		
-		previousFO = solRel->funObj_;
 
 		printf("FO solRel = %f\n", solRel->funObj_);
-		printf("FO solViav = %f\n", solViav->funObj_);
+		if (!ubFixo) {
+			printf("FO solViav = %f\n", solViav->funObj_);
+		}
 		printf("gap = %f\n", gap);
 		printf("eta = %f\n", eta);
 		printf("passo = %f\n", passo);
@@ -151,17 +124,34 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMult, MatRestC
 
 		desalocaIntancia(instRel);
 		desalocaSolucao(solRel);
-		desalocaSolucao(solViav);
 		free(subGrads);
 
+		if (solViav != NULL) {
+			desalocaSolucao(solViav);
+		}
+
 		it++;
-	//} while (eta > 0.005);
-	} while (eta > 0.005 && it < 1);
+
+		if (paradaPorTempo) {
+			h = clock() - h;
+			tempo = (double) (h / CLOCKS_PER_SEC);
+
+			continua = tempo < 3600 ? 1 : 0;
+		} else {
+			continua = eta > 0.005 ? 1 : 0;
+		}
+
+		continua = continua && passo != 0;
+
+	} while (continua);
 
 	h = clock() - h;
+	tempo = (double)(h / CLOCKS_PER_SEC);
 	printf("\n=============================\n");
 	printf("TEMPO DE EXECUCAO: %f\n", (double) h / CLOCKS_PER_SEC);
 	
+	montaResultado(bestSol, gap, firstLB, lb, firstUB, ub, tempo);
+
 	return bestSol;
 }
 //------------------------------------------------------------------------------

@@ -4,6 +4,15 @@
 #include "ValoresLimites.h"
 #include "Instancia.h"
 
+typedef struct tResultado {
+	double gap;
+	double firstLB;
+	double bestLB;
+	double firstUB;
+	double bestUB;
+	double tempo;
+}Resultado;
+
 typedef struct tSolucao
 {
 	// restrições SOFT
@@ -50,6 +59,9 @@ typedef struct tSolucao
 
 	// matriz de solução (período x dia x turma)
 	int* matSolTur_; // offset: p, d, u
+
+	Resultado resultado;
+	
 }Solucao;
 
 //// MÉTODOS ===================================================================================
@@ -67,4 +79,5 @@ void desalocaSolucao(Solucao *s);
 void compararSolucoes(Solucao* solRel, Solucao* solViav, Instancia* inst);
 void escreverResultadosCSV(char* arq, Solucao* s, Instancia* inst, float tempo, float);
 void initMats(Solucao *s, Instancia* inst);
+void montaResultado(Solucao* s, double gap, double firstLB, double bestLB, double firstUB, double bestUB, double tempo);
 #endif // Solucao

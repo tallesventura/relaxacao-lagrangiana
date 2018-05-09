@@ -531,6 +531,18 @@ void compararSolucoes(Solucao* sol1, Solucao* sol2, Instancia* inst) {
 }
 //------------------------------------------------------------------------------
 
+
+void montaResultado(Solucao* s, double gap, double firstLB, double bestLB, double firstUB, double bestUB, double tempo) {
+
+	s->resultado.gap = gap;
+	s->resultado.firstLB = firstLB;
+	s->resultado.bestLB = bestLB;
+	s->resultado.firstUB = firstUB;
+	s->resultado.bestUB = bestUB;
+	s->resultado.tempo = tempo;
+}
+
+
 void escreverResultadosCSV(char* arq, Solucao* s, Instancia* inst, double tempo, double eta, double gap) {
 
 	FILE* f = fopen(arq, "w");

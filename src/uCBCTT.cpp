@@ -85,7 +85,7 @@ void execUma(char* nomeInst) {
 	montarModeloPLI(aux, inst);
 #endif
 	printf("Executando Relaxacao Lagrangiana\n");
-	sol = execRelLagran(aux, inst, vetMult, matRestCplex);
+	sol = execRelLagran(aux, inst, vetMult, matRestCplex, 0, 1, 5);
 	//sol = execCpx(aux, inst, vetMultRes10, vetMultRes14, vetMultRes15);
 	montaSolucao(sol, inst);
 	strcpy_s(aux, PATH_INST);
