@@ -5,11 +5,11 @@
 #include "Instancia.h"
 
 typedef struct tResultado {
-	double gap;
 	double firstLB;
 	double bestLB;
 	double firstUB;
 	double bestUB;
+	double gap;
 	double tempo;
 }Resultado;
 
@@ -77,7 +77,7 @@ void calculaFO(Solucao *sol, Instancia* inst);
 Solucao* clonarSolucao(Solucao *sol, Instancia* inst);
 void desalocaSolucao(Solucao *s);
 void compararSolucoes(Solucao* solRel, Solucao* solViav, Instancia* inst);
-void escreverResultadosCSV(char* arq, Solucao* s, Instancia* inst, float tempo, float);
+void escreverResultadosCSV(char* arq, Solucao* s);
 void initMats(Solucao *s, Instancia* inst);
 void montaResultado(Solucao* s, double gap, double firstLB, double bestLB, double firstUB, double bestUB, double tempo);
 #endif // Solucao

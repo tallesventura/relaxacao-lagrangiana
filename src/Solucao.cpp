@@ -543,16 +543,11 @@ void montaResultado(Solucao* s, double gap, double firstLB, double bestLB, doubl
 }
 
 
-void escreverResultadosCSV(char* arq, Solucao* s, Instancia* inst, double tempo, double eta, double gap) {
+void escreverResultadosCSV(char* arq, Solucao* s) {
 
-	FILE* f = fopen(arq, "w");
+	Resultado res = s->resultado;
+	FILE* f = fopen(arq, "a");
 
-	fprintf(f, "FO: %f\n", s->funObj_);
-	fprintf(f, "GAP: %f\n", gap);
-	fprintf(f, "eta: %f\n", eta);
-	fprintf(f, "tempo: %f segundos\n", tempo);
-
-	
-
+	fprintf(f, "%f;%f;%f;%f;%f;%f\n", res.firstLB, res.bestLB, res.firstUB, res.bestUB, res.gap, res.tempo);
 	fclose(f);
 }

@@ -39,7 +39,7 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMult, MatRestC
 	
 	printf("\n");
 
-	clock_t h;
+	clock_t h, tCplex;
 	h = clock();
 
 	do {
@@ -51,7 +51,10 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMult, MatRestC
 		printf("Relaxando o modelo\n");
 		relaxarModelo(arq, instRel, vetMult, rest);
 		printf("Executando CPX\n");
+		tCplex = clock();
 		solRel = (Solucao*)execCpx(arq, instRel);
+		tCplex = clock() - tCplex;
+		printf("Tempo de execucao CPLEX: %f\n", (double)(tCplex / CLOCKS_PER_SEC));
 
 		if (!ubFixo) {
 			// Viabilizar a solução
@@ -87,7 +90,7 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMult, MatRestC
 			firstUB = ub;
 		}
 
-		gap = fabs((lb - ub) / ub) * 100;
+		gap = ub != 0 ? (fabs((lb - ub) / ub) * 100) : INFINITY;
 		printf("GAP: %f%%\n", fabs((lb - ub) / ub) * 100);
 
 		if (ub - lb < 1) {
@@ -159,8 +162,12 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMult, MatRestC
 //------------------------------------------------------------------------------
 void relaxarModelo(char *arq, Instancia* inst, double* vetMult, MatRestCplex* rest) {
 
+	clock_t tempo;
 	printf("Calculando coeficientes\n");
+	tempo = clock();
 	montaVetCoefsFO(inst, vetMult, rest);
+	tempo = clock() - tempo;
+	printf("Tempo do calculo dos coeficientes: %f\n", (double)(tempo / CLOCKS_PER_SEC));
 	printf("Escrevendo LP\n");
 	montarModeloRelaxado(arq, inst);
 }

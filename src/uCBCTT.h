@@ -13,6 +13,7 @@
 #define MIN(x,y) (((x) < (y)) ? (x) : (y))
 
 #define PATH_INST "instances\\"
+#define PATH_RESULTADOS "resultados\\"
 #define NUM_INST 21 // número de instâncias
 
 //===================================== MÉTODOS ================================
