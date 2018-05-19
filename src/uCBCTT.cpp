@@ -117,24 +117,24 @@ void execTodas() {
 
 	// ETA e viabilização
 	// TODO: rodar para todas instancias
-	for (int i = 0; i < 7; i++) {
+	for (int i = 0; i < NUM_INST; i++) {
 		char nomeArq[20];
 		char pathArq[150];
 
 		// TODO: trocar para o vetor de todas as intancias
-		strcpy_s(nomeArq, NOME_MEDIAS[i]);
+		strcpy_s(nomeArq, NOME_INSTANCIAS[i]);
 		strcat_s(nomeArq, "_ETA_viab");
 		strcpy_s(pathArq, PATH_RESULTADOS);
 		strcat_s(pathArq, nomeArq);
 		strcat_s(pathArq, ".txt");
 
 		// TODO: trocar para o vetor de todas as intancias
-		execUma(NOME_MEDIAS[i], pathArq, 0, 0 , UBs[i]);
+		execUma(NOME_INSTANCIAS[i], pathArq, 0, 0 , UBs[i]);
 	}
 
 	// ETA e UB fixo
 	// TODO: rodar para todas instancias
-	/*for (int i = 0; i < 1; i++) {
+	for (int i = 0; i < NUM_INST; i++) {
 		char nomeArq[20];
 		char pathArq[150];
 
@@ -145,35 +145,35 @@ void execTodas() {
 		strcat_s(pathArq, ".txt");
 
 		execUma(NOME_INSTANCIAS[i], pathArq, 0, 1, UBs[i]);
-	}*/
+	}
 
 	// Tempo e viabilização
-	//for (int i = 0; i < 1; i++) {
-	//	char nomeArq[20];
-	//	char pathArq[150];
+	for (int i = 0; i < NUM_INST; i++) {
+		char nomeArq[20];
+		char pathArq[150];
 
-	//	strcpy_s(nomeArq, NOME_INSTANCIAS[i]);
-	//	strcat_s(nomeArq, "_tempo_viab");
-	//	strcpy_s(pathArq, PATH_RESULTADOS);
-	//	strcat_s(pathArq, nomeArq);
-	//	strcat_s(pathArq, ".txt");
+		strcpy_s(nomeArq, NOME_INSTANCIAS[i]);
+		strcat_s(nomeArq, "_tempo_viab");
+		strcpy_s(pathArq, PATH_RESULTADOS);
+		strcat_s(pathArq, nomeArq);
+		strcat_s(pathArq, ".txt");
 
-	//	execUma(NOME_INSTANCIAS[i], pathArq, 1, 0, UBs[i]);
-	//}
+		execUma(NOME_INSTANCIAS[i], pathArq, 1, 0, UBs[i]);
+	}
 
 	//// Tempo e UB fixo
-	//for (int i = 0; i < 1; i++) {
-	//	char nomeArq[40];
-	//	char pathArq[150];
+	for (int i = 0; i < NUM_INST; i++) {
+		char nomeArq[40];
+		char pathArq[150];
 
-	//	strcpy_s(nomeArq, NOME_INSTANCIAS[i]);
-	//	strcat_s(nomeArq, "_tempo_UB_fixo");
-	//	strcpy_s(pathArq, PATH_RESULTADOS);
-	//	strcat_s(pathArq, nomeArq);
-	//	strcat_s(pathArq, ".txt");
+		strcpy_s(nomeArq, NOME_INSTANCIAS[i]);
+		strcat_s(nomeArq, "_tempo_UB_fixo");
+		strcpy_s(pathArq, PATH_RESULTADOS);
+		strcat_s(pathArq, nomeArq);
+		strcat_s(pathArq, ".txt");
 
-	//	execUma(NOME_INSTANCIAS[i], pathArq, 1, 1, UBs[i]);
-	//}
+		execUma(NOME_INSTANCIAS[i], pathArq, 1, 1, UBs[i]);
+	}
 }
 
 
