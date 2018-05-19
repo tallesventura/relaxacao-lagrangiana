@@ -39,8 +39,8 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMult, MatRestC
 	
 	printf("\n");
 
-	clock_t h, tCplex;
-	h = clock();
+	clock_t tInicio, tCplex, tFim, tAgora;
+	 tInicio = clock();
 
 	do {
 
@@ -123,7 +123,7 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMult, MatRestC
 		printf("it = %d\n", it);
 		printf("itSemMelhora = %d\n", itSemMelhora);
 		printf("\n");
-		printf("\n============================ FIM =====================================\n");
+		
 
 		desalocaIntancia(instRel);
 		desalocaSolucao(solRel);
@@ -135,25 +135,28 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMult, MatRestC
 
 		it++;
 
-		if (paradaPorTempo) {
-			h = clock() - h;
-			tempo = (double) (h / CLOCKS_PER_SEC);
+		tAgora = clock() - tInicio;
+		tempo = (double)(tAgora / CLOCKS_PER_SEC);
+		printf("TEMPO ATUAL: %f\n", tempo);
 
+		if (paradaPorTempo) {
 			continua = tempo < 3600 ? 1 : 0;
 		} else {
 			continua = eta > 0.005 ? 1 : 0;
 		}
 
+		printf("\n============================ FIM =====================================\n");
+
 		continua = continua && passo != 0;
 
 	} while (continua);
 
-	h = clock() - h;
-	tempo = (double)(h / CLOCKS_PER_SEC);
+	tFim = clock() - tInicio;
+	double tempoExec = (double)(tFim / CLOCKS_PER_SEC);
 	printf("\n=============================\n");
-	printf("TEMPO DE EXECUCAO: %f\n", (double) h / CLOCKS_PER_SEC);
+	printf("TEMPO DE EXECUCAO: %f\n", tempoExec);
 	
-	montaResultado(bestSol, gap, firstLB, lb, firstUB, ub, tempo);
+	montaResultado(bestSol, gap, firstLB, lb, firstUB, ub, tempoExec);
 
 	return bestSol;
 }

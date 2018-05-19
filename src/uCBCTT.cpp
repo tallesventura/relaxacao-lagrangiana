@@ -26,7 +26,9 @@ char INST[50] = "comp";
 char* NOME_INSTANCIAS[] = { "comp01", "comp02", "comp03", "comp04", "comp05", "comp06", "comp07", "comp08", "comp09", "comp10",
 "comp11", "comp12", "comp13", "comp14", "comp15", "comp16", "comp17", "comp18", "comp19", "comp20",
 "comp21" };
-
+char* NOME_GRANDES[]  = {"comp07", "comp20", "comp16", "comp10", "comp06", "comp21", "comp17"};
+char* NOME_MEDIAS[]   = {"comp12", "comp13", "comp08", "comp08", "comp04", "comp09", "comp02"};
+char* NOME_PEQUENAS[] = {"comp19", "comp03", "comp15", "comp05", "comp18", "comp11", "comp01"};
 int UBs[] = {5, 24, 52, 35, 211, 27, 6, 37, 96, 4, 0, 147, 59, 51, 52, 18, 56, 61, 57, 4, 74};
 
 //==============================================================================
@@ -36,8 +38,8 @@ int main(int argc, char *argv[])
 {
 	srand(time(NULL));
 	char nomeInst[10];
-	strcpy_s(nomeInst, INST);
-	strcat_s(nomeInst, "02");
+	//strcpy_s(nomeInst, INST);
+	//strcat_s(nomeInst, "02");
 
 	//execUma(nomeInst);
 	execTodas();
@@ -51,8 +53,6 @@ int main(int argc, char *argv[])
 void execUma(char* nomeInst, char* pathResult, int paradaPorTempo, int ubFixo, double ub) {
 	char aux[150];
 	Solucao* sol;
-
-	printf("RESULTADO EM: %s\n", pathResult);
 
 	strcpy_s(aux, PATH_INST);
 	strcat_s(aux, nomeInst);
@@ -89,7 +89,7 @@ void execUma(char* nomeInst, char* pathResult, int paradaPorTempo, int ubFixo, d
 	montarModeloPLI(aux, inst);
 #endif
 	printf("Executando Relaxacao Lagrangiana\n");
-	sol = execRelLagran(aux, inst, vetMult, matRestCplex, 0, 0, 0);
+	sol = execRelLagran(aux, inst, vetMult, matRestCplex, paradaPorTempo, ubFixo, ub);
 	montaSolucao(sol, inst);
 	strcpy_s(aux, PATH_INST);
 	strcat_s(aux, nomeInst);
@@ -103,11 +103,10 @@ void execUma(char* nomeInst, char* pathResult, int paradaPorTempo, int ubFixo, d
 	exportarCsv(sol, csv, inst);
 #endif
 	strcat_s(aux, ".sol");
-	printf("Escrevendo Resultados\n");
+	printf("Escrevendo Resultados em : %s\n", pathResult);
 	escreverResultadosCSV(pathResult, sol);
-	escreverSol(sol, aux, inst);
-	printf("Escrevendo Solucao\n");
-	escreverSol(sol, aux, inst);
+	//printf("Escrevendo Solucao\n");
+	//escreverSol(sol, aux, inst);
 	desalocaMatRestCplex(matRestCplex);
 	desalocaIntancia(inst);
 	desalocaSolucao(sol);
@@ -118,22 +117,24 @@ void execTodas() {
 
 	// ETA e viabilização
 	// TODO: rodar para todas instancias
-	for (int i = 0; i < 1; i++) {
+	for (int i = 0; i < 7; i++) {
 		char nomeArq[20];
 		char pathArq[150];
 
-		strcpy_s(nomeArq, NOME_INSTANCIAS[i]);
+		// TODO: trocar para o vetor de todas as intancias
+		strcpy_s(nomeArq, NOME_MEDIAS[i]);
 		strcat_s(nomeArq, "_ETA_viab");
 		strcpy_s(pathArq, PATH_RESULTADOS);
 		strcat_s(pathArq, nomeArq);
-		strcat_s(pathArq, ".csv");
+		strcat_s(pathArq, ".txt");
 
-		execUma(NOME_INSTANCIAS[i], pathArq, 0, 0 , UBs[i]);
+		// TODO: trocar para o vetor de todas as intancias
+		execUma(NOME_MEDIAS[i], pathArq, 0, 0 , UBs[i]);
 	}
 
 	// ETA e UB fixo
 	// TODO: rodar para todas instancias
-	for (int i = 0; i < 1; i++) {
+	/*for (int i = 0; i < 1; i++) {
 		char nomeArq[20];
 		char pathArq[150];
 
@@ -141,37 +142,38 @@ void execTodas() {
 		strcat_s(nomeArq, "_ETA_UB_fixo");
 		strcpy_s(pathArq, PATH_RESULTADOS);
 		strcat_s(pathArq, nomeArq);
-		strcat_s(pathArq, ".csv");
+		strcat_s(pathArq, ".txt");
 
 		execUma(NOME_INSTANCIAS[i], pathArq, 0, 1, UBs[i]);
-	}
+	}*/
 
 	// Tempo e viabilização
-	/*for (int i = 0; i < NUM_INST; i++) {
-		char nomeArq[20];
-		char pathArq[150];
+	//for (int i = 0; i < 1; i++) {
+	//	char nomeArq[20];
+	//	char pathArq[150];
 
-		strcpy_s(nomeArq, NOME_INSTANCIAS[i]);
-		strcat_s(nomeArq, "_tempo_viab");
-		strcpy_s(pathArq, PATH_RESULTADOS);
-		strcat_s(pathArq, nomeArq);
-		strcat_s(pathArq, ".csv");
+	//	strcpy_s(nomeArq, NOME_INSTANCIAS[i]);
+	//	strcat_s(nomeArq, "_tempo_viab");
+	//	strcpy_s(pathArq, PATH_RESULTADOS);
+	//	strcat_s(pathArq, nomeArq);
+	//	strcat_s(pathArq, ".txt");
 
-		execUma(NOME_INSTANCIAS[i], pathArq, 1, 0, UBs[i]);
-	}*/
+	//	execUma(NOME_INSTANCIAS[i], pathArq, 1, 0, UBs[i]);
+	//}
 
-	// Tempo e UB fixo
-	/*for (int i = 0; i < NUM_INST; i++) {
-		char nomeArq[20];
-		char pathArq[150];
+	//// Tempo e UB fixo
+	//for (int i = 0; i < 1; i++) {
+	//	char nomeArq[40];
+	//	char pathArq[150];
 
-		strcpy_s(nomeArq, NOME_INSTANCIAS[i]);
-		strcat_s(nomeArq, "_tempo_UB_fixo");
-		strcpy_s(pathArq, PATH_RESULTADOS);
-		strcat_s(pathArq, nomeArq);
-		strcat_s(pathArq, ".csv");
-		execUma(NOME_INSTANCIAS[i], pathArq, 1, 1, UBs[i]);
-	}*/
+	//	strcpy_s(nomeArq, NOME_INSTANCIAS[i]);
+	//	strcat_s(nomeArq, "_tempo_UB_fixo");
+	//	strcpy_s(pathArq, PATH_RESULTADOS);
+	//	strcat_s(pathArq, nomeArq);
+	//	strcat_s(pathArq, ".txt");
+
+	//	execUma(NOME_INSTANCIAS[i], pathArq, 1, 1, UBs[i]);
+	//}
 }
 
 

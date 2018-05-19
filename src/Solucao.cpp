@@ -546,7 +546,7 @@ void montaResultado(Solucao* s, double gap, double firstLB, double bestLB, doubl
 void escreverResultadosCSV(char* arq, Solucao* s) {
 
 	Resultado res = s->resultado;
-	FILE* f = fopen(arq, "a");
+	FILE* f = fopen(arq, "w");
 
 	fprintf(f, "%f;%f;%f;%f;%f;%f\n", res.firstLB, res.bestLB, res.firstUB, res.bestUB, res.gap, res.tempo);
 	fclose(f);
