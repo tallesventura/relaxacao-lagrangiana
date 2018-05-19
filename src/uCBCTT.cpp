@@ -129,7 +129,7 @@ void execTodas() {
 		execUma(NOME_INSTANCIAS[i], pathArq, 1, 0, UBs[i]);
 	}
 
-	//// Tempo e UB fixo
+	// Tempo e UB fixo
 	for (int i = 0; i < NUM_INST; i++) {
 		char nomeArq[40];
 		char pathArq[150];
@@ -144,25 +144,21 @@ void execTodas() {
 	}
 
 	// ETA e viabilização
-	// TODO: rodar para todas instancias
-	for (int i = 0; i < NUM_INST; i++) {
+	/*for (int i = 0; i < NUM_INST; i++) {
 		char nomeArq[20];
 		char pathArq[150];
 
-		// TODO: trocar para o vetor de todas as intancias
 		strcpy_s(nomeArq, NOME_INSTANCIAS[i]);
 		strcat_s(nomeArq, "_ETA_viab");
 		strcpy_s(pathArq, PATH_RESULTADOS);
 		strcat_s(pathArq, nomeArq);
 		strcat_s(pathArq, ".txt");
 
-		// TODO: trocar para o vetor de todas as intancias
 		execUma(NOME_INSTANCIAS[i], pathArq, 0, 0 , UBs[i]);
-	}
+	}*/
 
 	// ETA e UB fixo
-	// TODO: rodar para todas instancias
-	for (int i = 0; i < NUM_INST; i++) {
+	/*for (int i = 0; i < NUM_INST; i++) {
 		char nomeArq[20];
 		char pathArq[150];
 
@@ -173,7 +169,7 @@ void execTodas() {
 		strcat_s(pathArq, ".txt");
 
 		execUma(NOME_INSTANCIAS[i], pathArq, 0, 1, UBs[i]);
-	}
+	}*/
 }
 
 

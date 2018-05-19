@@ -21,7 +21,7 @@ void montarModeloPLI(char *arq, Instancia* inst);
 
 Solucao* execCpx(char *arq, Instancia* inst);
 
-void execUma(char* nomeInst);
+void execUma(char* nomeInst, char* pathResult, int paradaPorTempo, int ubFixo, double ub);
 void execTodas();
 void montarModeloPLI(char *arq, Instancia* inst);
 void montarModeloRelaxado(char *arq, Instancia* inst);
