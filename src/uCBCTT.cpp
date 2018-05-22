@@ -116,7 +116,7 @@ void execUma(char* nomeInst, char* pathResult, int paradaPorTempo, int ubFixo, d
 void execTodas() {
 
 	// Tempo e viabilização
-	for (int i = 0; i < NUM_INST; i++) {
+	/*for (int i = 0; i < NUM_INST; i++) {
 		char nomeArq[20];
 		char pathArq[150];
 
@@ -127,10 +127,10 @@ void execTodas() {
 		strcat_s(pathArq, ".txt");
 
 		execUma(NOME_INSTANCIAS[i], pathArq, 1, 0, UBs[i]);
-	}
+	}*/
 
 	// Tempo e UB fixo
-	for (int i = 0; i < NUM_INST; i++) {
+	/*for (int i = 0; i < NUM_INST; i++) {
 		char nomeArq[40];
 		char pathArq[150];
 
@@ -141,10 +141,10 @@ void execTodas() {
 		strcat_s(pathArq, ".txt");
 
 		execUma(NOME_INSTANCIAS[i], pathArq, 1, 1, UBs[i]);
-	}
+	}*/
 
 	// ETA e viabilização
-	/*for (int i = 0; i < NUM_INST; i++) {
+	for (int i = 0; i < NUM_INST; i++) {
 		char nomeArq[20];
 		char pathArq[150];
 
@@ -155,10 +155,10 @@ void execTodas() {
 		strcat_s(pathArq, ".txt");
 
 		execUma(NOME_INSTANCIAS[i], pathArq, 0, 0 , UBs[i]);
-	}*/
+	}
 
 	// ETA e UB fixo
-	/*for (int i = 0; i < NUM_INST; i++) {
+	for (int i = 0; i < NUM_INST; i++) {
 		char nomeArq[20];
 		char pathArq[150];
 
@@ -169,7 +169,7 @@ void execTodas() {
 		strcat_s(pathArq, ".txt");
 
 		execUma(NOME_INSTANCIAS[i], pathArq, 0, 1, UBs[i]);
-	}*/
+	}
 }
 
 

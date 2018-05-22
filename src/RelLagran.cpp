@@ -142,10 +142,8 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMult, MatRestC
 		if (paradaPorTempo) {
 			continua = tempo < 3600 ? 1 : 0;
 		} else {
-			continua = eta > 0.005 ? 1 : 0;
+			continua = (eta > 0.005 && tempo < 28800) ? 1 : 0;
 		}
-
-		printf("\n============================ FIM =====================================\n");
 
 		continua = continua && passo != 0;
 
@@ -155,6 +153,7 @@ Solucao* execRelLagran(char* arq, Instancia* instOrig, double* vetMult, MatRestC
 	double tempoExec = (double)(tFim / CLOCKS_PER_SEC);
 	printf("\n=============================\n");
 	printf("TEMPO DE EXECUCAO: %f\n", tempoExec);
+	printf("\n============================ FIM =====================================\n\n");
 	
 	montaResultado(bestSol, gap, firstLB, lb, firstUB, ub, tempoExec);
 
